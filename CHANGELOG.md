@@ -1,9 +1,56 @@
 # Changelog
 
+[한국어](CHANGELOG.ko.md) | **English**
+
 All notable changes to the Mossland Agentic Orchestrator will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] - 2025-01-03
+
+### Added
+
+#### Backlog-Based Workflow
+- **GitHub Issues as UI/DB**: Ideas and plans are now stored as GitHub Issues
+- **Human-in-the-Loop**: Label-based promotion system for stage transitions
+- **GitHubClient**: Full GitHub API integration for Issues and Labels
+- **BacklogOrchestrator**: New orchestrator for backlog-based workflow
+
+#### Promotion System
+- `promote:to-plan` label for promoting ideas to planning stage
+- `promote:to-dev` label for promoting plans to development stage
+- `processed:to-plan` and `processed:to-dev` labels for tracking
+- Automatic label management after processing
+
+#### New CLI Commands
+- `ao backlog run`: Run full orchestration cycle
+- `ao backlog generate`: Generate new idea issues
+- `ao backlog process`: Process pending promotions
+- `ao backlog status`: Show backlog status
+- `ao backlog setup`: Set up required labels in repository
+
+#### GitHub Integration
+- Issue templates for ideas (`idea.yml`) and plans (`plan.yml`)
+- Scheduled workflow (`backlog.yml`) for automated execution
+- Labels documentation (`docs/labels.md`)
+
+#### Concurrency Control
+- File-based locking to prevent simultaneous runs
+- Duplicate prevention via processed labels
+- Safe for cron/scheduled execution
+
+### Changed
+
+- Workflow model changed from auto-progression to human-guided
+- README.md rewritten for backlog-based workflow
+- Updated `.env.example` with GitHub configuration variables
+
+### Technical Details
+
+- Uses `httpx` for async-capable HTTP client
+- 83 unit tests passing
+- Full dry-run support for testing
 
 ## [0.1.0] - 2025-01-03
 

@@ -1,0 +1,307 @@
+# Mossland Agentic Orchestrator
+
+**한국어** | [English](README.md)
+
+모스랜드 생태계를 위한 마이크로 Web3 서비스를 발굴, 기획, 구현하는 자율 오케스트레이션 시스템입니다.
+
+## 주요 기능
+
+- **백로그 기반 워크플로우**: 아이디어와 계획을 GitHub Issues로 관리
+- **휴먼 인 더 루프**: 라벨 프로모션을 통해 개발할 아이디어를 사람이 선택
+- **자율 생성**: 오케스트레이터가 지속적으로 아이디어를 생성하고 프로모션을 처리
+- **자동 진행 없음**: 단계가 자동으로 진행되지 않음 - 무엇을 만들지 사람이 결정
+
+## 작동 방식
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    아이디어 백로그 (GitHub Issues)               │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  오케스트레이터가 아이디어 생성 → Issues로 저장           │  │
+│  │  라벨: type:idea, status:backlog                         │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                             │                                   │
+│              사람이 라벨 추가: promote:to-plan                  │
+│                             ▼                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                    계획 백로그 (GitHub Issues)                   │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  오케스트레이터가 프로모션된 아이디어로 상세 계획 생성    │  │
+│  │  라벨: type:plan, status:backlog                         │  │
+│  └──────────────────────────────────────────────────────────┘  │
+│                             │                                   │
+│              사람이 라벨 추가: promote:to-dev                   │
+│                             ▼                                   │
+├─────────────────────────────────────────────────────────────────┤
+│                    개발 (Repository)                             │
+│  ┌──────────────────────────────────────────────────────────┐  │
+│  │  오케스트레이터가 프로젝트 스캐폴드 생성                  │  │
+│  │  디렉토리: projects/<project_id>/                        │  │
+│  └──────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## 빠른 시작
+
+### 1. 설치
+
+```bash
+# 클론 및 설치
+git clone https://github.com/mossland/agentic-orchestrator.git
+cd agentic-orchestrator
+python -m venv venv
+source venv/bin/activate
+pip install -e .
+
+# 환경 설정
+cp .env.example .env
+# .env 파일에 API 키 입력
+```
+
+### 2. 라벨 설정
+
+```bash
+ao backlog setup
+```
+
+GitHub 저장소에 필요한 모든 라벨을 생성합니다.
+
+### 3. 아이디어 생성
+
+```bash
+# 새 아이디어 2개 생성
+ao backlog generate --count 2
+```
+
+아이디어가 `type:idea` 및 `status:backlog` 라벨과 함께 GitHub Issues로 나타납니다.
+
+### 4. 아이디어 프로모션 (사람이 수행)
+
+GitHub에서:
+1. 아이디어 이슈로 이동
+2. `promote:to-plan` 라벨 추가
+
+### 5. 프로모션 처리
+
+```bash
+ao backlog process
+```
+
+오케스트레이터가 다음을 수행합니다:
+- `promote:to-plan` 라벨이 있는 이슈 찾기
+- 상세 기획 문서 생성
+- 새로운 `type:plan` 이슈 생성
+- 원본 아이디어에 `status:planned` 업데이트
+
+### 6. 개발 시작 (사람이 수행)
+
+GitHub에서:
+1. 계획 이슈로 이동
+2. `promote:to-dev` 라벨 추가
+
+그런 다음 실행:
+```bash
+ao backlog process
+```
+
+오케스트레이터가 `projects/<id>/`에 프로젝트 스캐폴드를 생성합니다.
+
+## CLI 명령어
+
+### 백로그 명령어 (권장)
+
+```bash
+# 전체 사이클 실행: 아이디어 생성 + 프로모션 처리
+ao backlog run
+
+# 아이디어만 생성
+ao backlog generate --count 2
+
+# 프로모션만 처리 (아이디어 생성 없음)
+ao backlog process
+
+# 백로그 상태 확인
+ao backlog status
+
+# 저장소에 라벨 설정
+ao backlog setup
+```
+
+### 옵션
+
+```bash
+# 드라이 런 (실제 변경 없음)
+ao backlog run --dry-run
+
+# 특정 개수의 아이디어 생성
+ao backlog run --ideas 3
+
+# 아이디어 생성 건너뛰기
+ao backlog run --no-ideas
+
+# 처리할 프로모션 제한
+ao backlog run --max-promotions 3
+```
+
+## 프로모션 워크플로우
+
+### 아이디어를 계획으로 프로모션
+
+1. GitHub Issues에서 개발하고 싶은 **아이디어 찾기**
+2. `promote:to-plan` **라벨 추가**
+3. 오케스트레이터 실행 **대기** (또는 `ao backlog process` 실행)
+4. **결과**: 상세 PRD, 아키텍처, 태스크가 포함된 새 `[PLAN]` 이슈 생성
+
+### 계획을 개발로 프로모션
+
+1. 계획 이슈를 **검토**하고 준비되었는지 확인
+2. `promote:to-dev` **라벨 추가**
+3. 오케스트레이터 실행 **대기** (또는 `ao backlog process` 실행)
+4. **결과**: `projects/<id>/`에 프로젝트 스캐폴드 생성
+
+## 라벨
+
+| 라벨 | 용도 | 추가하는 주체 |
+|------|------|---------------|
+| `promote:to-plan` | **아이디어를 계획으로 프로모션** | 사람 |
+| `promote:to-dev` | **개발 시작** | 사람 |
+| `type:idea` | 아이디어 이슈 표시 | 오케스트레이터 |
+| `type:plan` | 계획 이슈 표시 | 오케스트레이터 |
+| `status:backlog` | 백로그에 있음 | 오케스트레이터 |
+| `status:planned` | 아이디어가 계획됨 | 오케스트레이터 |
+| `status:in-dev` | 개발 중 | 오케스트레이터 |
+
+전체 라벨 문서는 [docs/labels.md](docs/labels.md)를 참조하세요.
+
+## 스케줄 실행
+
+### GitHub Actions (권장)
+
+포함된 워크플로우가 스케줄에 따라 오케스트레이터를 실행합니다:
+
+```yaml
+# .github/workflows/orchestrator.yml
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # 6시간마다
+```
+
+### Cron Job
+
+```bash
+# 6시간마다 실행
+0 */6 * * * cd /path/to/repo && /path/to/venv/bin/ao backlog run >> logs/cron.log 2>&1
+```
+
+### 아이디어 생성 빈도
+
+기본값: **실행당 1-2개 아이디어** (설정 가능)
+
+권장 스케줄:
+- 6시간마다 1개 아이디어 = ~4개/일
+- 12시간마다 2개 아이디어 = ~4개/일
+- 매일 3개 아이디어 = 3개/일
+
+## 환경 변수
+
+| 변수 | 설명 | 필수 |
+|------|------|------|
+| `GITHUB_TOKEN` | GitHub PAT (Issues, Labels) | **예** |
+| `GITHUB_OWNER` | 저장소 소유자 | **예** |
+| `GITHUB_REPO` | 저장소 이름 | **예** |
+| `ANTHROPIC_API_KEY` | Claude API 키 | API 모드용 |
+| `OPENAI_API_KEY` | OpenAI API 키 | 리뷰용 |
+| `GEMINI_API_KEY` | Gemini API 키 | 리뷰용 |
+| `DRY_RUN` | 변경 없이 실행 | 아니오 |
+
+### GitHub 토큰 권한
+
+필요한 스코프:
+- `repo` - 전체 저장소 접근 (Issues 및 Labels용)
+
+## 오류 처리
+
+### Rate Limiting (Claude)
+
+- 자동으로 rate limit 리셋 대기
+- 최대 재시도 및 대기 시간 설정 가능
+- 모든 재시도 시도 로깅
+
+### Quota Exhaustion (OpenAI/Gemini)
+
+- `alerts/quota.md`에 알림 생성
+- 프로바이더, 모델, 스테이지, 오류 로깅
+- 해결 단계 제공
+- 무한 루프 없음
+
+### 동시성 제어
+
+- 락 파일로 동시 실행 방지
+- cron/스케줄 실행에 안전
+
+## 프로젝트 구조
+
+```
+agentic-orchestrator/
+├── .agent/
+│   └── orchestrator.lock    # 동시성 락
+├── .github/
+│   ├── ISSUE_TEMPLATE/      # 아이디어 및 계획 템플릿
+│   └── workflows/           # CI 및 스케줄러
+├── alerts/                  # 오류/할당량 알림
+├── docs/
+│   └── labels.md            # 라벨 문서
+├── projects/
+│   └── <project_id>/        # 생성된 프로젝트
+│       ├── 01_ideation/
+│       ├── 02_planning/
+│       ├── 03_implementation/
+│       └── 04_quality/
+├── prompts/                 # 프롬프트 템플릿
+├── src/
+│   └── agentic_orchestrator/
+│       ├── backlog.py       # 백로그 워크플로우
+│       ├── cli.py           # CLI 명령어
+│       ├── github_client.py # GitHub API
+│       ├── orchestrator.py  # 레거시 오케스트레이터
+│       ├── providers/       # LLM 어댑터
+│       └── utils/           # 유틸리티
+└── tests/
+```
+
+## 모스랜드 포커스
+
+다음에 초점을 맞춰 아이디어를 생성합니다:
+- **마이크로 Web3 서비스** - 1-2주 내 달성 가능한 작은 규모
+- **MOC 토큰 유틸리티** - 토큰 가치 및 사용성 향상
+- **생태계 이점** - 모스랜드 커뮤니티 지원
+- **실용적 범위** - 대규모 플랫폼 개발 지양
+
+예시:
+- 토큰 분석 대시보드
+- 커뮤니티 거버넌스 도구
+- NFT 유틸리티 확장
+- 보상 분배 시스템
+- 콘텐츠 검증 도구
+
+## 개발
+
+### 테스트 실행
+
+```bash
+pytest tests/ -v
+```
+
+### 새 기능 추가
+
+1. 워크플로우 변경은 `src/agentic_orchestrator/backlog.py` 수정
+2. `src/agentic_orchestrator/cli.py`에서 CLI 업데이트
+3. `tests/`에 테스트 추가
+
+## 라이선스
+
+MIT License - 자세한 내용은 [LICENSE](LICENSE)를 참조하세요.
+
+---
+
+*모스랜드 생태계를 위해 구축됨 - 사람이 가이드하고, AI가 구동하는 혁신.*

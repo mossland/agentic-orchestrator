@@ -16,7 +16,14 @@ from agentic_orchestrator.utils.files import (
     sanitize_filename,
 )
 from agentic_orchestrator.utils.git import GitHelper
-from agentic_orchestrator.utils.config import get_env, get_env_bool, get_env_int
+from agentic_orchestrator.utils.config import (
+    get_env,
+    get_env_bool,
+    get_env_int,
+    validate_backlog_environment,
+    validate_environment_for_command,
+    EnvironmentValidationError,
+)
 
 
 class TestFileUtils:
@@ -220,3 +227,168 @@ class TestGitHelper:
         text = "This is normal text without secrets"
         masked = GitHelper.mask_sensitive_data(text)
         assert masked == text
+
+
+# =============================================================================
+# v0.2.1 Tests: Environment Validation
+# =============================================================================
+
+
+class TestEnvironmentValidation:
+    """Tests for environment variable validation."""
+
+    def test_validate_backlog_environment_success(self):
+        """Test successful validation with all required variables."""
+        import os
+        from unittest.mock import patch
+
+        env_vars = {
+            "GITHUB_TOKEN": "ghp_test123",
+            "GITHUB_OWNER": "test-owner",
+            "GITHUB_REPO": "test-repo",
+            "ANTHROPIC_API_KEY": "sk-ant-test123",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            result = validate_backlog_environment()
+
+            assert result["valid"] is True
+            assert result["github"]["valid"] is True
+            assert result["llm"]["valid"] is True
+            assert "Claude" in result["llm"]["available"]
+
+    def test_validate_backlog_environment_missing_github(self):
+        """Test validation fails when GitHub credentials are missing."""
+        import os
+        from unittest.mock import patch
+
+        env_vars = {
+            "ANTHROPIC_API_KEY": "sk-ant-test123",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            with pytest.raises(EnvironmentValidationError) as exc_info:
+                validate_backlog_environment()
+
+            assert "GITHUB_TOKEN" in exc_info.value.missing
+            assert "GITHUB_OWNER" in exc_info.value.missing
+            assert "GITHUB_REPO" in exc_info.value.missing
+
+    def test_validate_backlog_environment_missing_llm(self):
+        """Test validation fails when no LLM API key is present."""
+        import os
+        from unittest.mock import patch
+
+        env_vars = {
+            "GITHUB_TOKEN": "ghp_test123",
+            "GITHUB_OWNER": "test-owner",
+            "GITHUB_REPO": "test-repo",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            with pytest.raises(EnvironmentValidationError) as exc_info:
+                validate_backlog_environment()
+
+            # Should mention LLM keys
+            assert any("API_KEY" in m for m in exc_info.value.missing)
+
+    def test_validate_backlog_environment_any_llm_is_enough(self):
+        """Test that any single LLM API key is sufficient."""
+        import os
+        from unittest.mock import patch
+
+        # Test with OpenAI only
+        env_vars = {
+            "GITHUB_TOKEN": "ghp_test123",
+            "GITHUB_OWNER": "test-owner",
+            "GITHUB_REPO": "test-repo",
+            "OPENAI_API_KEY": "sk-test123",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            result = validate_backlog_environment()
+            assert result["valid"] is True
+            assert "OpenAI" in result["llm"]["available"]
+
+        # Test with Gemini only
+        env_vars = {
+            "GITHUB_TOKEN": "ghp_test123",
+            "GITHUB_OWNER": "test-owner",
+            "GITHUB_REPO": "test-repo",
+            "GEMINI_API_KEY": "AIzaTest123",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            result = validate_backlog_environment()
+            assert result["valid"] is True
+            assert "Gemini" in result["llm"]["available"]
+
+    def test_validate_environment_for_command_backlog(self):
+        """Test validation for backlog commands."""
+        import os
+        from unittest.mock import patch
+
+        env_vars = {
+            "GITHUB_TOKEN": "ghp_test123",
+            "GITHUB_OWNER": "test-owner",
+            "GITHUB_REPO": "test-repo",
+            "ANTHROPIC_API_KEY": "sk-ant-test123",
+        }
+
+        with patch.dict(os.environ, env_vars, clear=True):
+            # Should call validate_backlog_environment for these commands
+            result = validate_environment_for_command("backlog")
+            assert result["valid"] is True
+
+            result = validate_environment_for_command("backlog run")
+            assert result["valid"] is True
+
+            result = validate_environment_for_command("backlog generate")
+            assert result["valid"] is True
+
+            result = validate_environment_for_command("backlog process")
+            assert result["valid"] is True
+
+    def test_validate_environment_for_other_commands(self):
+        """Test that other commands don't require specific validation."""
+        import os
+        from unittest.mock import patch
+
+        # Even with no env vars, other commands should pass
+        with patch.dict(os.environ, {}, clear=True):
+            result = validate_environment_for_command("init")
+            assert result["valid"] is True
+
+            result = validate_environment_for_command("status")
+            assert result["valid"] is True
+
+    def test_environment_validation_error_message(self):
+        """Test that error message is descriptive."""
+        import os
+        from unittest.mock import patch
+
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(EnvironmentValidationError) as exc_info:
+                validate_backlog_environment()
+
+            # Error message should mention GitHub and LLM
+            assert "GitHub" in exc_info.value.message or "GITHUB" in exc_info.value.message
+            assert "LLM" in exc_info.value.message or "API_KEY" in str(exc_info.value.missing)
+
+    def test_environment_validation_error_attributes(self):
+        """Test EnvironmentValidationError has correct attributes."""
+        error = EnvironmentValidationError(
+            missing=["GITHUB_TOKEN", "ANTHROPIC_API_KEY"],
+            message="Test error message"
+        )
+
+        assert error.missing == ["GITHUB_TOKEN", "ANTHROPIC_API_KEY"]
+        assert error.message == "Test error message"
+        assert str(error) == "Test error message"
+
+    def test_environment_validation_error_default_message(self):
+        """Test EnvironmentValidationError default message."""
+        error = EnvironmentValidationError(missing=["VAR1", "VAR2"])
+
+        assert "VAR1" in error.message
+        assert "VAR2" in error.message

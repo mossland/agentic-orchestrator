@@ -17,9 +17,29 @@ from rich import print as rprint
 from . import __version__
 from .orchestrator import Orchestrator
 from .backlog import BacklogOrchestrator
-from .utils.config import get_env_bool, get_env_int
+from .utils.config import (
+    get_env_bool,
+    get_env_int,
+    validate_backlog_environment,
+    EnvironmentValidationError,
+)
 
 console = Console()
+
+
+def validate_backlog_env_or_exit() -> None:
+    """Validate backlog environment and exit with helpful message if invalid."""
+    try:
+        validate_backlog_environment()
+    except EnvironmentValidationError as e:
+        console.print(Panel(
+            f"[bold red]Environment Configuration Error[/bold red]\n\n"
+            f"{e.message}\n\n"
+            f"[dim]Tip: Copy .env.example to .env and configure your API keys.[/dim]",
+            title="Configuration Required",
+            border_style="red",
+        ))
+        sys.exit(1)
 
 
 def create_orchestrator(dry_run: bool = False) -> Orchestrator:
@@ -336,6 +356,9 @@ def backlog_run(ideas: int, no_ideas: bool, max_promotions: int, dry_run: bool):
     Generates ideas, processes promotions, and starts development
     for promoted items.
     """
+    # Validate environment before proceeding
+    validate_backlog_env_or_exit()
+
     console.print("[bold blue]Running backlog orchestration cycle[/bold blue]")
 
     if dry_run:
@@ -376,6 +399,9 @@ def backlog_run(ideas: int, no_ideas: bool, max_promotions: int, dry_run: bool):
 @click.option("--dry-run", is_flag=True, help="Run without making changes")
 def backlog_generate(count: int, dry_run: bool):
     """Generate new idea issues."""
+    # Validate environment before proceeding
+    validate_backlog_env_or_exit()
+
     console.print(f"[bold blue]Generating {count} idea(s)...[/bold blue]")
 
     if dry_run:
@@ -402,6 +428,9 @@ def backlog_generate(count: int, dry_run: bool):
 @click.option("--dry-run", is_flag=True, help="Run without making changes")
 def backlog_process(max: int, dry_run: bool):
     """Process pending promotions only (no idea generation)."""
+    # Validate environment before proceeding
+    validate_backlog_env_or_exit()
+
     console.print("[bold blue]Processing pending promotions...[/bold blue]")
 
     if dry_run:

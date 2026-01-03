@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "agentic-orchestrator"
-version = "0.1.0"
+version = "0.2.1"
 description = "Autonomous orchestration system for Mossland micro Web3 service development"
 readme = "README.md"
 license = {text = "MIT"}

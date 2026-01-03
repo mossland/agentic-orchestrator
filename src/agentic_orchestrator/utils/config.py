@@ -258,3 +258,109 @@ def load_config(config_path: Optional[Path] = None) -> Config:
         Config instance.
     """
     return Config(config_path)
+
+
+class EnvironmentValidationError(Exception):
+    """Raised when required environment variables are missing."""
+
+    def __init__(self, missing: list, message: str = None):
+        self.missing = missing
+        self.message = message or f"Missing required environment variables: {', '.join(missing)}"
+        super().__init__(self.message)
+
+
+def validate_backlog_environment() -> dict:
+    """
+    Validate environment variables required for backlog workflow.
+
+    Checks for:
+    - GitHub credentials (GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO)
+    - At least one LLM provider API key
+
+    Returns:
+        Dict with validation status and details.
+
+    Raises:
+        EnvironmentValidationError: If required variables are missing.
+    """
+    result = {
+        "valid": True,
+        "github": {"valid": True, "missing": []},
+        "llm": {"valid": True, "missing": [], "available": []},
+        "warnings": [],
+    }
+
+    # Check GitHub credentials
+    github_required = ["GITHUB_TOKEN", "GITHUB_OWNER", "GITHUB_REPO"]
+    github_missing = [var for var in github_required if not os.environ.get(var)]
+
+    if github_missing:
+        result["valid"] = False
+        result["github"]["valid"] = False
+        result["github"]["missing"] = github_missing
+
+    # Check LLM providers (at least one must be available)
+    llm_providers = {
+        "ANTHROPIC_API_KEY": "Claude",
+        "OPENAI_API_KEY": "OpenAI",
+        "GEMINI_API_KEY": "Gemini",
+    }
+
+    available_llm = []
+    for env_var, provider_name in llm_providers.items():
+        if os.environ.get(env_var):
+            available_llm.append(provider_name)
+
+    result["llm"]["available"] = available_llm
+
+    if not available_llm:
+        result["valid"] = False
+        result["llm"]["valid"] = False
+        result["llm"]["missing"] = list(llm_providers.keys())
+
+    # Raise error if validation failed
+    if not result["valid"]:
+        all_missing = result["github"]["missing"] + (
+            result["llm"]["missing"] if not result["llm"]["available"] else []
+        )
+
+        error_parts = []
+        if result["github"]["missing"]:
+            error_parts.append(
+                f"GitHub: {', '.join(result['github']['missing'])}"
+            )
+        if not result["llm"]["available"]:
+            error_parts.append(
+                "LLM: At least one of ANTHROPIC_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY"
+            )
+
+        raise EnvironmentValidationError(
+            missing=all_missing,
+            message=(
+                f"Missing required environment variables:\n"
+                f"  - {chr(10) + '  - '.join(error_parts)}\n\n"
+                f"See .env.example for configuration details."
+            ),
+        )
+
+    return result
+
+
+def validate_environment_for_command(command: str) -> dict:
+    """
+    Validate environment for a specific CLI command.
+
+    Args:
+        command: The command name (e.g., "backlog", "init", "step").
+
+    Returns:
+        Dict with validation status.
+
+    Raises:
+        EnvironmentValidationError: If required variables are missing.
+    """
+    if command in ("backlog", "backlog run", "backlog generate", "backlog process"):
+        return validate_backlog_environment()
+
+    # Other commands may have different requirements
+    return {"valid": True}

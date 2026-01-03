@@ -7,6 +7,32 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025-01-04
+
+### Added
+
+#### Stability Improvements
+- **Idempotency Protection**: Prevents duplicate plan/dev creation by checking labels and existing artifacts
+- **Lock Timeout Mechanism**: Detects and removes stale locks from crashed processes
+- **Environment Validation**: Early validation of required environment variables with helpful error messages
+- **Partial Failure Rollback**: Automatically closes plan issues if subsequent operations fail
+
+#### New Tests
+- 22 new tests for v0.2.1 features (idempotency, lock timeout, environment validation, rollback)
+- Total test count increased from 83 to 105
+
+### Changed
+
+- Lock file now includes PID and timestamp for stale lock detection
+- Config.get() now properly supports nested key lookups with defaults
+- CLI commands validate environment before execution
+
+### Technical Details
+
+- Lock timeout defaults to 300 seconds (configurable via config.yaml)
+- Process liveness check using signal 0
+- Rollback adds `rollback:failed` label to closed issues
+
 ## [0.2.0] - 2025-01-03
 
 ### Added

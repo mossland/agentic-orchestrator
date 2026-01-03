@@ -105,6 +105,43 @@
 
 ---
 
+## Phase 4: 안정성 및 신뢰성 (v0.2.1) ✅
+
+### 완료 항목
+
+#### 멱등성 보호
+- [x] PlanGenerator: 이미 처리된 아이디어 스킵
+- [x] PlanGenerator: 기존 plan 검색 및 중복 방지
+- [x] DevScaffolder: 이미 처리된 plan 스킵
+- [x] DevScaffolder: 기존 project 검색 및 중복 방지
+
+#### Lock 타임아웃
+- [x] Lock 파일에 PID 및 타임스탬프 기록
+- [x] 타임아웃(기본 300초) 초과 시 stale lock 제거
+- [x] 프로세스 생존 확인 (signal 0 사용)
+- [x] 잘못된 형식의 lock 파일 처리
+
+#### 환경 변수 검증
+- [x] validate_backlog_environment() 함수
+- [x] EnvironmentValidationError 예외 클래스
+- [x] CLI 명령 시작 시 환경 검증
+- [x] 친절한 오류 메시지 제공
+
+#### 부분 실패 롤백
+- [x] Plan 생성 후 라벨 업데이트 실패 시 롤백
+- [x] 생성된 Plan 이슈 자동 닫기
+- [x] `rollback:failed` 라벨 추가
+- [x] 오류 코멘트 추가
+
+#### 테스트
+- [x] 멱등성 테스트 6개
+- [x] Lock 타임아웃 테스트 6개
+- [x] 환경 검증 테스트 9개
+- [x] 롤백 테스트 1개
+- [x] 총 테스트 105개 통과
+
+---
+
 ## 커밋 히스토리
 
 ```
@@ -228,4 +265,4 @@ ao backlog run
 
 ---
 
-*마지막 업데이트: 2025-01-03*
+*마지막 업데이트: 2025-01-04*

@@ -1,0 +1,7 @@
+# This directory contains project outputs
+# Each project has its own subdirectory with the structure:
+# projects/<project_id>/
+# ├── 01_ideation/
+# ├── 02_planning/
+# ├── 03_implementation/
+# └── 04_quality/

@@ -1,0 +1,38 @@
+# Agentic Orchestrator State File Template
+# This file is created automatically by `ao init`
+# Do not edit manually unless you know what you're doing
+
+# Current stage in the pipeline
+stage: IDEATION
+
+# Active project identifier
+project_id: null
+
+# Iteration counters
+iteration:
+  planning: 0
+  dev: 0
+
+# Maximum iterations before escalation
+limits:
+  planning_max: 3
+  dev_max: 5
+
+# Quality metrics
+quality:
+  review_score: null
+  tests_passed: null
+  required_score: 7.0
+  review_approvals: 0
+
+# Timestamps
+timestamps:
+  created: null
+  last_updated: null
+  stage_started: null
+
+# Error tracking
+errors:
+  last_error: null
+  error_count: 0
+  paused_reason: null

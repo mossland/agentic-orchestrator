@@ -4,6 +4,7 @@ CLI entry point for the Agentic Orchestrator.
 Provides commands for both legacy pipeline and new backlog-based workflow.
 """
 
+import logging
 import sys
 from pathlib import Path
 from typing import Optional
@@ -15,6 +16,7 @@ from rich.panel import Panel
 from rich import print as rprint
 
 from . import __version__
+from .utils.logging import setup_logging
 from .orchestrator import Orchestrator
 from .backlog import BacklogOrchestrator
 from .utils.config import (
@@ -332,7 +334,9 @@ def push(dry_run: bool):
 # =============================================================================
 
 @main.group()
-def backlog():
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose/debug logging")
+@click.pass_context
+def backlog(ctx, verbose: bool):
     """
     Backlog-based workflow commands.
 
@@ -341,7 +345,11 @@ def backlog():
     - Humans promote ideas to plans via labels
     - Humans promote plans to development via labels
     """
-    pass
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    if verbose:
+        setup_logging(level=logging.DEBUG)
+        console.print("[dim]Verbose logging enabled[/dim]")
 
 
 @backlog.command("run")

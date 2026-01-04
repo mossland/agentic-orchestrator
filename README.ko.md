@@ -8,6 +8,7 @@
 
 - **백로그 기반 워크플로우**: 아이디어와 계획을 GitHub Issues로 관리
 - **휴먼 인 더 루프**: 라벨 프로모션을 통해 개발할 아이디어를 사람이 선택
+- **트렌드 기반 아이디어**: RSS 피드를 통해 현재 뉴스 트렌드에서 아이디어 생성
 - **자율 생성**: 오케스트레이터가 지속적으로 아이디어를 생성하고 프로모션을 처리
 - **자동 진행 없음**: 단계가 자동으로 진행되지 않음 - 무엇을 만들지 사람이 결정
 
@@ -114,14 +115,26 @@ ao backlog process
 # 전체 사이클 실행: 아이디어 생성 + 프로모션 처리
 ao backlog run
 
-# 아이디어만 생성
+# 트렌드 분석 포함 실행 (전통적 1개 + 트렌드 기반 2개)
+ao backlog run --ideas 1 --trend-ideas 2 --analyze-trends
+
+# 전통적 아이디어만 생성
 ao backlog generate --count 2
+
+# 트렌드 기반 아이디어 생성
+ao backlog generate-trends --count 2
+
+# 트렌드 분석만 실행 (아이디어 생성 없음)
+ao backlog analyze-trends
 
 # 프로모션만 처리 (아이디어 생성 없음)
 ao backlog process
 
 # 백로그 상태 확인
 ao backlog status
+
+# 트렌드 분석 이력 확인
+ao backlog trends-status
 
 # 저장소에 라벨 설정
 ao backlog setup
@@ -133,8 +146,11 @@ ao backlog setup
 # 드라이 런 (실제 변경 없음)
 ao backlog run --dry-run
 
-# 특정 개수의 아이디어 생성
+# 특정 개수의 전통적 아이디어 생성
 ao backlog run --ideas 3
+
+# 트렌드 기반 아이디어 생성
+ao backlog run --trend-ideas 2 --analyze-trends
 
 # 아이디어 생성 건너뛰기
 ao backlog run --no-ideas
@@ -170,6 +186,7 @@ ao backlog run --max-promotions 3
 | `status:backlog` | 백로그에 있음 | 오케스트레이터 |
 | `status:planned` | 아이디어가 계획됨 | 오케스트레이터 |
 | `status:in-dev` | 개발 중 | 오케스트레이터 |
+| `source:trend` | 트렌드 분석에서 생성된 아이디어 | 오케스트레이터 |
 
 전체 라벨 문서는 [docs/labels.md](docs/labels.md)를 참조하세요.
 
@@ -177,30 +194,36 @@ ao backlog run --max-promotions 3
 
 ### GitHub Actions (권장)
 
-포함된 워크플로우가 스케줄에 따라 오케스트레이터를 실행합니다:
+포함된 워크플로우가 매일 오전 8시 KST에 오케스트레이터를 실행합니다:
 
 ```yaml
-# .github/workflows/orchestrator.yml
+# .github/workflows/backlog.yml
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 6시간마다
+    - cron: '0 23 * * *'  # 매일 오전 8시 KST (23:00 UTC)
 ```
+
+기본 일일 실행:
+- 전통적 모스랜드 중심 아이디어 1개
+- RSS 피드 기반 트렌드 아이디어 2개
 
 ### Cron Job
 
 ```bash
-# 6시간마다 실행
-0 */6 * * * cd /path/to/repo && /path/to/venv/bin/ao backlog run >> logs/cron.log 2>&1
+# 매일 오전 8시 KST (23:00 UTC) 실행
+0 23 * * * cd /path/to/repo && /path/to/venv/bin/ao backlog run --ideas 1 --trend-ideas 2 --analyze-trends >> logs/cron.log 2>&1
 ```
 
-### 아이디어 생성 빈도
+### 트렌드 기반 아이디어 생성
 
-기본값: **실행당 1-2개 아이디어** (설정 가능)
+오케스트레이터는 5개 카테고리의 17개 RSS 피드에서 기사를 수집합니다:
+- **AI**: OpenAI News, Google Blog, arXiv AI, TechCrunch, Hacker News
+- **Crypto**: CoinDesk, Cointelegraph, Decrypt, The Defiant, CryptoSlate
+- **Finance**: CNBC Finance
+- **Security**: The Hacker News, Krebs on Security
+- **Dev**: The Verge, Ars Technica, Stack Overflow Blog
 
-권장 스케줄:
-- 6시간마다 1개 아이디어 = ~4개/일
-- 12시간마다 2개 아이디어 = ~4개/일
-- 매일 3개 아이디어 = 3개/일
+트렌드 분석 결과는 `data/trends/YYYY/MM/YYYY-MM-DD.md`에 저장됩니다.
 
 ## 환경 변수
 
@@ -249,6 +272,9 @@ agentic-orchestrator/
 │   ├── ISSUE_TEMPLATE/      # 아이디어 및 계획 템플릿
 │   └── workflows/           # CI 및 스케줄러
 ├── alerts/                  # 오류/할당량 알림
+├── data/
+│   └── trends/              # 트렌드 분석 저장소
+│       └── YYYY/MM/         # 일별 분석 파일
 ├── docs/
 │   └── labels.md            # 라벨 문서
 ├── projects/
@@ -265,24 +291,31 @@ agentic-orchestrator/
 │       ├── github_client.py # GitHub API
 │       ├── orchestrator.py  # 레거시 오케스트레이터
 │       ├── providers/       # LLM 어댑터
+│       ├── trends/          # 트렌드 분석 모듈
 │       └── utils/           # 유틸리티
 └── tests/
 ```
 
-## 모스랜드 포커스
+## 아이디어 생성
 
-다음에 초점을 맞춰 아이디어를 생성합니다:
+### 전통적 아이디어 (모스랜드 중심)
 - **마이크로 Web3 서비스** - 1-2주 내 달성 가능한 작은 규모
 - **MOC 토큰 유틸리티** - 토큰 가치 및 사용성 향상
 - **생태계 이점** - 모스랜드 커뮤니티 지원
 - **실용적 범위** - 대규모 플랫폼 개발 지양
 
+### 트렌드 기반 아이디어
+- **현재 트렌드** - RSS 피드의 실시간 뉴스 기반
+- **Web3 기회** - 트렌딩 토픽에 대한 블록체인 응용 식별
+- **시의성** - 핫 토픽이 관련성 있을 때 활용
+- **크로스 산업** - AI, 암호화폐, 보안, 개발 트렌드
+
 예시:
 - 토큰 분석 대시보드
 - 커뮤니티 거버넌스 도구
 - NFT 유틸리티 확장
-- 보상 분배 시스템
-- 콘텐츠 검증 도구
+- AI 에이전트 통합 (AI 트렌드 기반)
+- DeFi 프로토콜 도구 (암호화폐 트렌드 기반)
 
 ## 개발
 

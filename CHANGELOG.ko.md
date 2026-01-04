@@ -7,6 +7,69 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.3.0] - 2026-01-04
+
+### 추가됨
+
+#### 트렌드 기반 아이디어 생성
+- **RSS 피드 통합**: AI, Crypto, Finance, Security, Dev 5개 카테고리의 17개 RSS 피드에서 기사 수집
+- **트렌드 분석**: Claude를 사용하여 뉴스 기사에서 트렌딩 토픽 식별
+- **다중 기간 분석**: 24시간, 1주, 1개월 기간에 걸쳐 트렌드 분석
+- **트렌드 기반 아이디어**: 현재 트렌드를 기반으로 Web3 마이크로 서비스 아이디어 생성
+- **트렌드 저장소**: YAML frontmatter가 포함된 Markdown 파일로 트렌드 분석 결과 저장
+
+#### 새 트렌드 모듈
+- `FeedFetcher` - feedparser를 사용한 RSS/Atom 피드 파싱
+- `TrendAnalyzer` - Claude를 사용한 LLM 기반 트렌드 추출
+- `TrendStorage` - `data/trends/YYYY/MM/`에 Markdown 파일 저장
+- `TrendBasedIdeaGenerator` - 트렌딩 토픽에서 아이디어 생성
+
+#### 새 라벨
+- `source:trend` - 트렌드 분석에서 생성된 아이디어 표시
+
+#### 새 CLI 명령어
+- `ao backlog analyze-trends` - RSS 피드 수집 및 분석
+- `ao backlog generate-trends` - 트렌드 기반 아이디어 생성
+- `ao backlog trends-status` - 트렌드 분석 이력 표시
+
+#### CLI 업데이트
+- `ao backlog run`에 `--trend-ideas` 및 `--analyze-trends` 옵션 추가
+- `ao backlog status`에서 트렌드 기반 아이디어 수 표시
+
+#### GitHub Actions
+- 스케줄을 매일 오전 8시 KST (23:00 UTC)로 변경
+- 새 `run-with-trends` 명령 (기본 일일 실행)
+- `generate-trends`, `analyze-trends`, `trends-status` 명령 추가
+
+### 변경됨
+
+- 기본 일일 실행: 전통적 아이디어 1개 + 트렌드 기반 아이디어 2개와 트렌드 분석
+- 트렌드 데이터는 `data/trends/` 디렉토리에 저장 (90일 보존)
+
+### 설정
+
+`config.yaml`에 새 `trends` 섹션:
+```yaml
+trends:
+  ideas:
+    traditional_count: 1
+    trend_based_count: 2
+  periods: [24h, 1w, 1m]
+  storage:
+    directory: data/trends
+    retention_days: 90
+  feeds:
+    ai: [OpenAI News, Google Blog, arXiv AI, TechCrunch, Hacker News]
+    crypto: [CoinDesk, Cointelegraph, Decrypt, The Defiant, CryptoSlate]
+    finance: [CNBC Finance]
+    security: [The Hacker News, Krebs on Security]
+    dev: [The Verge, Ars Technica, Stack Overflow Blog]
+```
+
+### 의존성
+
+- RSS/Atom 파싱을 위한 `feedparser>=6.0.0` 추가
+
 ## [0.2.1] - 2025-01-04
 
 ### 추가됨

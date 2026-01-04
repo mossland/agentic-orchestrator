@@ -145,7 +145,7 @@ Good examples:
     def _get_idea_prompt(self) -> str:
         return """Generate ONE innovative micro Web3 service idea for the Mossland ecosystem.
 
-Provide a structured response with these exact sections:
+Provide a structured response with these exact sections (in ENGLISH first, then KOREAN translation):
 
 ## Title
 A short, descriptive name (3-6 words)
@@ -178,6 +178,36 @@ How do we measure success? List 2-3 metrics:
 - Metric 1
 - Metric 2
 
+---
+
+## 한국어 번역 (Korean Translation)
+
+Now provide the KOREAN translation of ALL sections above:
+
+## 제목
+(Title in Korean)
+
+## 문제
+(Problem in Korean)
+
+## 대상 사용자
+(Target User in Korean)
+
+## 왜 모스랜드인가
+(Why Mossland in Korean)
+
+## MVP 범위
+(MVP Scope in Korean)
+
+## 기술적 접근
+(Technical Approach in Korean)
+
+## 위험 요소
+(Risks in Korean)
+
+## 성공 지표
+(Success Metrics in Korean)
+
 Be specific and practical. Focus on something that can actually be built quickly."""
 
     def _parse_idea_response(self, response: str) -> dict:
@@ -191,7 +221,14 @@ Be specific and practical. Focus on something that can actually be built quickly
         if len(title) > 80:
             title = title[:77] + "..."
 
-        # Build body with all sections
+        # Extract Korean title
+        korean_title = self._extract_section(response, "제목", "문제")
+        if korean_title == "(Not provided)":
+            korean_title = ""
+        else:
+            korean_title = korean_title.replace("#", "").strip()
+
+        # Build body with all sections (English + Korean)
         body = f"""## Overview
 
 {self._extract_section(response, "Problem", "Target User")}
@@ -218,7 +255,39 @@ Be specific and practical. Focus on something that can actually be built quickly
 
 ## Success Metrics
 
-{self._extract_section(response, "Success Metrics", None)}
+{self._extract_section(response, "Success Metrics", "한국어 번역")}
+
+---
+
+# 🇰🇷 한국어 (Korean)
+
+## 개요
+
+{self._extract_section(response, "문제", "대상 사용자")}
+
+## 대상 사용자
+
+{self._extract_section(response, "대상 사용자", "왜 모스랜드인가")}
+
+## 왜 모스랜드인가
+
+{self._extract_section(response, "왜 모스랜드인가", "MVP 범위")}
+
+## MVP 범위
+
+{self._extract_section(response, "MVP 범위", "기술적 접근")}
+
+## 기술적 접근
+
+{self._extract_section(response, "기술적 접근", "위험 요소")}
+
+## 위험 요소
+
+{self._extract_section(response, "위험 요소", "성공 지표")}
+
+## 성공 지표
+
+{self._extract_section(response, "성공 지표", None)}
 
 ---
 
@@ -479,7 +548,7 @@ Focus on:
 
 ---
 
-Provide a structured response with these exact sections:
+Provide a structured response with these exact sections (in ENGLISH first, then KOREAN translation):
 
 ## Title
 A short, descriptive name (3-6 words) that reflects the trend
@@ -512,6 +581,36 @@ How do we measure success? List 2-3 metrics:
 - Metric 1
 - Metric 2
 
+---
+
+## 한국어 번역 (Korean Translation)
+
+Now provide the KOREAN translation of ALL sections above:
+
+## 제목
+(Title in Korean)
+
+## 트렌드 연결
+(Trend Connection in Korean)
+
+## 문제
+(Problem in Korean)
+
+## 대상 사용자
+(Target User in Korean)
+
+## MVP 범위
+(MVP Scope in Korean)
+
+## 기술적 접근
+(Technical Approach in Korean)
+
+## 위험 요소
+(Risks in Korean)
+
+## 성공 지표
+(Success Metrics in Korean)
+
 Be specific, practical, and timely. Focus on something that can be built quickly while the trend is hot."""
 
     def _parse_trend_idea_response(self, response: str, trend: Trend) -> dict:
@@ -525,7 +624,7 @@ Be specific, practical, and timely. Focus on something that can be built quickly
         if len(title) > 80:
             title = title[:77] + "..."
 
-        # Build body with trend context
+        # Build body with trend context (English + Korean)
         body = f"""## Trend Source
 
 **Topic:** {trend.topic}
@@ -561,7 +660,39 @@ Be specific, practical, and timely. Focus on something that can be built quickly
 
 ## Success Metrics
 
-{self._extract_section(response, "Success Metrics", None)}
+{self._extract_section(response, "Success Metrics", "한국어 번역")}
+
+---
+
+# 🇰🇷 한국어 (Korean)
+
+## 트렌드 연결
+
+{self._extract_section(response, "트렌드 연결", "문제")}
+
+## 문제
+
+{self._extract_section(response, "문제", "대상 사용자")}
+
+## 대상 사용자
+
+{self._extract_section(response, "대상 사용자", "MVP 범위")}
+
+## MVP 범위
+
+{self._extract_section(response, "MVP 범위", "기술적 접근")}
+
+## 기술적 접근
+
+{self._extract_section(response, "기술적 접근", "위험 요소")}
+
+## 위험 요소
+
+{self._extract_section(response, "위험 요소", "성공 지표")}
+
+## 성공 지표
+
+{self._extract_section(response, "성공 지표", None)}
 
 ---
 

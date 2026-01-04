@@ -117,6 +117,18 @@ Prioritize trends with:
                 system_message=self.SYSTEM_MESSAGE,
             )
 
+            # Check for empty response
+            if not response or not response.strip():
+                logger.warning(f"Empty response from Claude for period {period}")
+                return TrendAnalysis(
+                    date=datetime.utcnow(),
+                    period=period,
+                    trends=[],
+                    raw_article_count=len(analysis_items),
+                    sources_analyzed=sources,
+                    categories_analyzed=categories,
+                )
+
             # Parse response into trends
             trends = self._parse_trends_response(response, period)
 

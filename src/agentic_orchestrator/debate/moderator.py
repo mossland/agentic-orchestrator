@@ -85,17 +85,17 @@ class DebateModerator:
         },
     ]
 
-    # Termination indicators in founder's response
-    SATISFACTION_INDICATORS = [
-        "충분히 개선됨",
-        "충분히 개선되었",
-        "개선 완료",
-        "진행 준비 완료",
-        "실행 준비",
-        "sufficient improvement",
-        "sufficiently improved",
-        "ready to proceed",
-        "ready for execution",
+    # Explicit termination markers - only these exact strings trigger termination
+    # The founder must write [TERMINATE] explicitly to end the debate
+    TERMINATION_MARKERS = [
+        "[TERMINATE]",
+        "[terminate]",
+    ]
+
+    # Continue markers for clarity (used for logging, not detection)
+    CONTINUE_MARKERS = [
+        "[CONTINUE]",
+        "[continue]",
     ]
 
     # Approval indicators from feedback providers
@@ -198,11 +198,10 @@ class DebateModerator:
         return False, "continue"
 
     def _is_founder_satisfied(self, response: str) -> bool:
-        """Check if founder indicated sufficient improvement."""
-        response_lower = response.lower()
+        """Check if founder explicitly marked termination with [TERMINATE]."""
         return any(
-            indicator.lower() in response_lower
-            for indicator in self.SATISFACTION_INDICATORS
+            marker in response
+            for marker in self.TERMINATION_MARKERS
         )
 
     def _all_approved(self, feedback_responses: Dict[Role, str]) -> bool:

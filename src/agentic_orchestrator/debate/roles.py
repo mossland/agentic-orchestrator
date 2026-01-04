@@ -145,22 +145,26 @@ Please respond in the following format:
 | ... | ... | ... |
 
 ## Improvement Assessment
-Choose ONE and explain your reasoning:
-- **Sufficiently Improved**: Core concerns are addressed, ready for execution
-- **Needs Further Discussion**: Important issues remain unresolved
+
+Evaluate the current state and write ONE of the following markers:
+- Write `[TERMINATE]` if the plan is sufficiently improved and ready for execution
+- Write `[CONTINUE]` if important issues remain unresolved and further discussion is needed
+
+**Your Decision**: (Write [TERMINATE] or [CONTINUE] here, then explain your reasoning)
 
 ## Updated Plan
 
 [PLAN_START]
 
-(Write the complete updated plan here. Include ALL sections from the original plan with improvements incorporated.)
-
-[PLAN_END]
+(Write the complete updated plan here. Include ALL sections with improvements.)
 
 ---
-[Korean Translation / 한국어 번역]
 
-Please provide a Korean translation of the updated plan below the English version.
+## 한국어 번역 / Korean Translation
+
+(위 기획서의 전체 한국어 번역을 여기에 작성하세요.)
+
+[PLAN_END]
 """
 
 

@@ -7,6 +7,51 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.4.0] - 2026-01-04
+
+### 추가됨
+
+#### PLAN 생성을 위한 멀티 에이전트 토론 시스템
+- **4개 토론 역할**: 창업자, VC (a16z/Sequoia 수준), Accelerator (YC/Techstars 수준), 창업가 친구
+- **3개 AI 프로바이더**: Claude, ChatGPT, Gemini가 매 라운드 역할을 순환하며 다양한 관점 제공
+- **역할 순환**: 각 라운드마다 다른 AI가 다른 역할 담당
+- **조기 종료**: 창업자가 "충분히 개선됨" 판단 시 또는 최대 5라운드에서 토론 종료
+- **토론 기록**: 전체 토론 히스토리가 접기/펼치기 가능한 GitHub 댓글로 저장
+
+#### 토론 모듈 (`src/agentic_orchestrator/debate/`)
+- `roles.py` - 이중 언어 프롬프트 (영어 + 한국어)가 포함된 역할 정의
+- `moderator.py` - 라운드 순환 매트릭스 및 종료 로직
+- `debate_session.py` - 전체 토론 세션 오케스트레이션
+- `discussion_record.py` - GitHub 댓글 포맷팅
+
+#### Plan 거부 워크플로우
+- **`reject:plan` 라벨**: PLAN을 거부하고 원본 아이디어에서 재생성
+- **`ao backlog reject <plan_number>`**: 계획 거부를 위한 CLI 명령어
+- **자동 리셋**: 거부된 plan이 닫히고, 원본 아이디어에 `promote:to-plan` 복원
+
+#### 이중 언어 지원
+- 모든 토론 프롬프트가 영어로 작성되고 한국어 번역 요청 포함
+- 토론 기록은 "English / 한국어" 형식으로 표시
+- 기획서 추출에 `[PLAN_START]`/`[PLAN_END]` 마커 사용으로 신뢰성 향상
+
+### 변경됨
+
+- PlanGenerator가 3개 프로바이더 모두 사용 가능 시 멀티 에이전트 토론 사용
+- 프로바이더 불가 시 단일 에이전트 생성으로 폴백
+- `run_cycle()`에서 거부 처리가 프로모션 처리 전에 실행
+- `_find_existing_plan_for_idea()`가 열린 이슈만 검색 (닫힌/거부된 이슈 무시)
+
+### 설정
+
+`config.yaml`에 새 `debate` 섹션:
+```yaml
+debate:
+  enabled: true
+  max_rounds: 5
+  min_rounds: 1
+  require_all_approval: false
+```
+
 ## [0.3.0] - 2026-01-04
 
 ### 추가됨

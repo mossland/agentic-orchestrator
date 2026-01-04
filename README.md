@@ -6,6 +6,7 @@ An autonomous orchestration system for discovering, planning, and implementing m
 
 - **Backlog-Based Workflow**: Ideas and plans are stored as GitHub Issues
 - **Human-in-the-Loop**: Humans select which ideas to develop via label promotion
+- **Multi-Agent Debate**: Plans are refined through debate between 4 AI roles (Founder, VC, Accelerator, Founder Friend)
 - **Trend-Based Ideas**: Generates ideas from current news trends via RSS feeds
 - **Autonomous Generation**: Orchestrator continuously generates ideas and processes promotions
 - **No Auto-Progression**: Stages don't advance automatically - humans decide what to build
@@ -173,12 +174,56 @@ ao backlog run --max-promotions 3
 3. **Wait for orchestrator** to run (or run `ao backlog process`)
 4. **Result**: Project scaffold created in `projects/<id>/`
 
+### Rejecting a Plan
+
+If the generated plan is not satisfactory:
+1. **Add the label** `reject:plan` to the plan issue
+2. **Wait for orchestrator** to run (or run `ao backlog process`)
+3. **Result**: Plan is closed, original idea gets `promote:to-plan` restored for regeneration
+
+Or use CLI:
+```bash
+ao backlog reject 123  # Reject plan issue #123
+```
+
+## Multi-Agent Debate System
+
+When all 3 AI providers (Claude, ChatGPT, Gemini) are available, plans are generated through a debate process:
+
+### Debate Roles
+
+| Role | Perspective | Provider Rotation |
+|------|-------------|-------------------|
+| **Founder** | Vision, conviction, action | Rotates each round |
+| **VC** | Market, investment, scalability | Rotates each round |
+| **Accelerator** | Execution, validation, MVP | Rotates each round |
+| **Founder Friend** | Peer support, creative ideas | Same as Founder |
+
+### Debate Flow
+
+```
+Round 1-5 (or until "Sufficiently Improved"):
+  1. Founder presents/updates plan
+  2. VC provides market/investment feedback
+  3. Accelerator provides execution feedback
+  4. Founder Friend provides peer perspective
+  5. Founder reflects, adopts/rejects feedback, updates plan
+  6. Check termination condition
+```
+
+### Output
+
+- **PLAN Issue**: Contains final refined plan
+- **Debate Record**: Full discussion history as collapsible comment
+- **Bilingual**: All content in English with Korean translation
+
 ## Labels
 
 | Label | Purpose | Added By |
 |-------|---------|----------|
 | `promote:to-plan` | **Promote idea to planning** | Human |
 | `promote:to-dev` | **Start development** | Human |
+| `reject:plan` | **Reject plan and regenerate** | Human |
 | `type:idea` | Marks an idea issue | Orchestrator |
 | `type:plan` | Marks a planning issue | Orchestrator |
 | `status:backlog` | In backlog | Orchestrator |
@@ -290,6 +335,7 @@ agentic-orchestrator/
 │       ├── orchestrator.py  # Legacy orchestrator
 │       ├── providers/       # LLM adapters
 │       ├── trends/          # Trend analysis module
+│       ├── debate/          # Multi-agent debate system
 │       └── utils/           # Utilities
 └── tests/
 ```

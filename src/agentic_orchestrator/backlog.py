@@ -16,9 +16,10 @@ from typing import Optional, List, Tuple, Dict
 from .github_client import GitHubClient, GitHubIssue, Labels, GitHubRateLimitError
 from .trends import FeedFetcher, TrendAnalyzer, TrendStorage, Trend, TrendAnalysis, TrendIdeaLink
 from .providers.claude import create_claude_provider, ClaudeProvider
-from .providers.openai import create_openai_provider
-from .providers.gemini import create_gemini_provider
-from .providers.base import QuotaExhaustedError
+from .providers.openai import create_openai_provider, OpenAIProvider
+from .providers.gemini import create_gemini_provider, GeminiProvider
+from .providers.base import QuotaExhaustedError, BaseProvider
+from .debate import create_debate_session, DebateResult
 from .utils.logging import get_logger
 from .utils.config import load_config, get_env_int, get_env_bool
 from .utils.files import (
@@ -766,23 +767,76 @@ class PlanGenerator:
 
     Creates detailed PRD, Architecture, Tasks, and Acceptance Criteria
     and stores them in a new GitHub Issue.
+
+    Supports two modes:
+    1. Simple mode: Single AI generates the plan (default fallback)
+    2. Debate mode: Multi-agent debate with Founder, VC, Accelerator, Founder Friend
     """
 
     def __init__(
         self,
         github: GitHubClient,
         claude: Optional[ClaudeProvider] = None,
+        openai: Optional[OpenAIProvider] = None,
+        gemini: Optional[GeminiProvider] = None,
         dry_run: bool = False,
+        enable_debate: bool = True,
+        debate_max_rounds: int = 5,
     ):
         self.github = github
         self._claude = claude
+        self._openai = openai
+        self._gemini = gemini
         self.dry_run = dry_run
+        self.enable_debate = enable_debate
+        self.debate_max_rounds = debate_max_rounds
 
     @property
     def claude(self) -> ClaudeProvider:
         if self._claude is None:
             self._claude = create_claude_provider(dry_run=self.dry_run)
         return self._claude
+
+    @property
+    def openai(self) -> Optional[OpenAIProvider]:
+        if self._openai is None:
+            try:
+                self._openai = create_openai_provider(dry_run=self.dry_run)
+            except Exception as e:
+                logger.warning(f"Failed to create OpenAI provider: {e}")
+                return None
+        return self._openai
+
+    @property
+    def gemini(self) -> Optional[GeminiProvider]:
+        if self._gemini is None:
+            try:
+                self._gemini = create_gemini_provider(dry_run=self.dry_run)
+            except Exception as e:
+                logger.warning(f"Failed to create Gemini provider: {e}")
+                return None
+        return self._gemini
+
+    def _all_providers_available(self) -> bool:
+        """Check if all providers are available for debate mode."""
+        try:
+            claude_ok = self.claude is not None and self.claude.is_available()
+            openai_ok = self.openai is not None and self.openai.is_available()
+            gemini_ok = self.gemini is not None and self.gemini.is_available()
+            return claude_ok and openai_ok and gemini_ok
+        except Exception:
+            return False
+
+    def _get_providers_dict(self) -> Dict[str, BaseProvider]:
+        """Get providers as a dictionary for debate session."""
+        providers = {}
+        if self.claude:
+            providers["claude"] = self.claude
+        if self.openai:
+            providers["openai"] = self.openai
+        if self.gemini:
+            providers["gemini"] = self.gemini
+        return providers
 
     def generate_plan_from_idea(self, idea_issue: GitHubIssue) -> Optional[GitHubIssue]:
         """
@@ -814,6 +868,25 @@ class PlanGenerator:
             )
             return None
 
+        # Choose generation mode: debate or simple
+        if self.enable_debate and self._all_providers_available():
+            logger.info("Using multi-agent debate mode for plan generation")
+            return self._generate_plan_with_debate(idea_issue)
+        else:
+            if self.enable_debate:
+                logger.warning(
+                    "Debate mode enabled but not all providers available, "
+                    "falling back to simple mode"
+                )
+            return self._generate_plan_simple(idea_issue)
+
+    def _generate_plan_simple(self, idea_issue: GitHubIssue) -> Optional[GitHubIssue]:
+        """
+        Generate plan using single AI (simple mode).
+
+        This is the fallback mode when debate mode is disabled or
+        not all providers are available.
+        """
         # Track created artifacts for rollback
         created_plan: Optional[GitHubIssue] = None
 
@@ -1009,21 +1082,159 @@ Be specific and practical. Focus on MVP scope that can be built in 1-2 weeks."""
 
         return body
 
+    def _generate_plan_with_debate(self, idea_issue: GitHubIssue) -> Optional[GitHubIssue]:
+        """
+        Generate plan using multi-agent debate mode.
+
+        This mode uses Claude, ChatGPT, and Gemini to play different roles
+        (Founder, VC, Accelerator, Founder Friend) and debate the plan
+        through multiple rounds.
+        """
+        created_plan: Optional[GitHubIssue] = None
+
+        try:
+            # Create debate session
+            session = create_debate_session(
+                idea_title=idea_issue.title,
+                idea_content=idea_issue.body,
+                idea_issue_number=idea_issue.number,
+                providers=self._get_providers_dict(),
+                max_rounds=self.debate_max_rounds,
+                dry_run=self.dry_run,
+            )
+
+            # Run the debate
+            logger.info(f"Starting debate for idea #{idea_issue.number}")
+            debate_result = session.run_debate()
+            logger.info(
+                f"Debate completed: {debate_result.total_rounds} rounds, "
+                f"reason: {debate_result.termination_reason}"
+            )
+
+            if self.dry_run:
+                logger.info(f"[DRY RUN] Would create plan from debate for idea #{idea_issue.number}")
+                return None
+
+            # Build plan content with debate result
+            plan_content = self._format_debate_plan(idea_issue, debate_result)
+
+            # Create plan issue
+            plan_title = idea_issue.title.replace("[IDEA]", "[PLAN]")
+            created_plan = self.github.create_issue(
+                title=plan_title,
+                body=plan_content,
+                labels=[
+                    Labels.TYPE_PLAN,
+                    Labels.STATUS_BACKLOG,
+                    Labels.GENERATED_BY_ORCHESTRATOR,
+                ],
+            )
+            logger.debug(f"Created plan issue #{created_plan.number}")
+
+            # Update debate record with plan issue number
+            debate_result.record.plan_issue_number = created_plan.number
+
+            # Add discussion record as comment
+            discussion_comment = debate_result.format_discussion_record()
+            self.github.add_comment(created_plan.number, discussion_comment)
+            logger.debug(f"Added discussion record to plan #{created_plan.number}")
+
+            # Update idea issue status
+            self.github.mark_idea_as_planned(idea_issue.number)
+            logger.debug(f"Marked idea #{idea_issue.number} as planned")
+
+            # Add cross-reference comments
+            try:
+                self.github.add_comment(
+                    idea_issue.number,
+                    f"Planning document created: #{created_plan.number}\n\n"
+                    f"This idea has been promoted to the planning phase through "
+                    f"a {debate_result.total_rounds}-round multi-agent debate.",
+                )
+
+                self.github.add_comment(
+                    created_plan.number,
+                    f"This plan was generated from idea #{idea_issue.number}.\n\n"
+                    f"**Generation method:** Multi-agent debate ({debate_result.total_rounds} rounds)\n"
+                    f"**Termination reason:** {debate_result.termination_reason}\n\n"
+                    f"**To promote this plan to development:** Add the `promote:to-dev` label.",
+                )
+            except Exception as comment_err:
+                logger.warning(f"Failed to add cross-reference comments: {comment_err}")
+
+            logger.info(f"Created plan issue #{created_plan.number} via debate")
+            return created_plan
+
+        except Exception as e:
+            logger.error(f"Failed to generate plan via debate for #{idea_issue.number}: {e}")
+
+            # Rollback if plan was created
+            if created_plan is not None:
+                try:
+                    logger.warning(f"Rolling back: closing plan issue #{created_plan.number}")
+                    self.github.update_issue(
+                        created_plan.number,
+                        state="closed",
+                        labels=[Labels.TYPE_PLAN, "rollback:failed"],
+                    )
+                    self.github.add_comment(
+                        created_plan.number,
+                        f"This plan was automatically closed due to an error during debate.\n\n"
+                        f"Error: {e}\n\n"
+                        f"The original idea #{idea_issue.number} may need to be re-promoted.",
+                    )
+                except Exception as rollback_err:
+                    logger.error(f"Failed to rollback plan issue: {rollback_err}")
+
+            # Add error comment to idea
+            if not self.dry_run:
+                try:
+                    self.github.add_comment(
+                        idea_issue.number,
+                        f"Failed to generate plan via debate: {e}\n\n"
+                        f"Please try again or create plan manually.",
+                    )
+                except Exception:
+                    pass
+
+            raise
+
+    def _format_debate_plan(self, idea_issue: GitHubIssue, debate_result: DebateResult) -> str:
+        """Format the final plan from debate result."""
+        body = f"""# Planning Document
+
+**Source Idea:** #{idea_issue.number}
+**Generated:** {datetime.now().strftime("%Y-%m-%d %H:%M")} UTC
+**Generation Method:** Multi-Agent Debate ({debate_result.total_rounds} rounds)
+
+---
+
+{debate_result.final_plan}
+
+---
+
+**To promote this plan to development:** Add the `promote:to-dev` label.
+"""
+        return body
+
     def _find_existing_plan_for_idea(self, idea_number: int) -> List[GitHubIssue]:
         """
-        Find existing plan issues that reference a specific idea.
+        Find existing OPEN plan issues that reference a specific idea.
+
+        Only returns open plans - closed/rejected plans are ignored,
+        allowing new plans to be generated for the same idea.
 
         Args:
             idea_number: The idea issue number to search for.
 
         Returns:
-            List of plan issues that reference this idea.
+            List of open plan issues that reference this idea.
         """
         try:
-            # Search for plan issues that mention this idea number
+            # Search for OPEN plan issues only (closed/rejected plans are ignored)
             plans = self.github.search_issues(
                 labels=[Labels.TYPE_PLAN],
-                state="all",  # Include closed plans too
+                state="open",  # Only open plans - rejected plans are closed
             )
 
             # Filter plans that reference this idea in their body
@@ -1467,6 +1678,7 @@ class BacklogOrchestrator:
                 "trend_ideas_generated": 0,
                 "trends_analyzed": False,
                 "plans_generated": 0,
+                "plans_rejected": 0,
                 "devs_started": 0,
                 "errors": [],
             }
@@ -1508,7 +1720,23 @@ class BacklogOrchestrator:
                     logger.error(f"Trend-based idea generation failed: {e}")
                     results["errors"].append(f"Trend ideas: {e}")
 
-            # 3. Process idea promotions
+            # 3. Process rejected plans FIRST (before promotions)
+            # This ensures rejected plans reset their ideas before promotion processing
+            try:
+                rejected_plans = self.github.find_rejected_plans()
+                for plan in rejected_plans[:max_promotions]:
+                    try:
+                        result = self._process_rejected_plan(plan)
+                        if result:
+                            results["plans_rejected"] += 1
+                    except Exception as e:
+                        logger.error(f"Rejected plan processing failed for #{plan.number}: {e}")
+                        results["errors"].append(f"Reject plan #{plan.number}: {e}")
+            except Exception as e:
+                logger.error(f"Finding rejected plans failed: {e}")
+                results["errors"].append(f"Find rejected plans: {e}")
+
+            # 4. Process idea promotions (including newly reset ideas from rejected plans)
             try:
                 promoted_ideas = self.github.find_ideas_to_promote()
                 for idea in promoted_ideas[:max_promotions]:
@@ -1607,3 +1835,126 @@ class BacklogOrchestrator:
     def get_trend_status(self, days: int = 7) -> dict:
         """Get trend analysis status."""
         return self.trend_generator.get_trend_status(days=days)
+
+    def _process_rejected_plan(self, plan_issue: GitHubIssue) -> bool:
+        """
+        Process a rejected plan: close it and reset the original idea for re-planning.
+
+        Args:
+            plan_issue: The rejected PLAN issue
+
+        Returns:
+            True if processed successfully
+        """
+        logger.info(f"Processing rejected plan #{plan_issue.number}: {plan_issue.title}")
+
+        # Find the original idea number from the plan body
+        idea_number = self._extract_idea_number_from_plan(plan_issue)
+
+        if not idea_number:
+            logger.warning(
+                f"Could not find source idea for plan #{plan_issue.number}, "
+                "closing plan without resetting idea"
+            )
+            # Still close the plan but can't reset the idea
+            self.github.update_issue(
+                plan_issue.number,
+                state="closed",
+                labels=[Labels.TYPE_PLAN, "rejected", "orphan"],
+            )
+            self.github.add_comment(
+                plan_issue.number,
+                "This plan was rejected but the source idea could not be found.\n\n"
+                "The plan has been closed. Please manually re-promote the original idea if needed.",
+            )
+            return True
+
+        # Reject the plan and reset the idea
+        closed_plan, reset_idea = self.github.reject_plan(
+            plan_issue_number=plan_issue.number,
+            idea_issue_number=idea_number,
+        )
+
+        # Add comments explaining what happened
+        self.github.add_comment(
+            plan_issue.number,
+            f"This plan was rejected by a human reviewer.\n\n"
+            f"The original idea #{idea_number} has been reset and is ready for re-planning.\n\n"
+            f"A new planning round will start automatically when the orchestrator runs.",
+        )
+
+        self.github.add_comment(
+            idea_number,
+            f"The plan (#{plan_issue.number}) generated from this idea was rejected.\n\n"
+            f"This idea has been reset to the backlog with `promote:to-plan` label.\n"
+            f"A new plan will be generated in the next orchestrator cycle.",
+        )
+
+        logger.info(
+            f"Rejected plan #{plan_issue.number}, reset idea #{idea_number} for re-planning"
+        )
+        return True
+
+    def _extract_idea_number_from_plan(self, plan_issue: GitHubIssue) -> Optional[int]:
+        """
+        Extract the source idea number from a plan issue body.
+
+        Args:
+            plan_issue: The PLAN issue
+
+        Returns:
+            Idea issue number or None if not found
+        """
+        import re
+
+        # Look for patterns like "Source Idea: #123" or "idea #123"
+        patterns = [
+            r"Source Idea:\s*#(\d+)",
+            r"\*\*Source Idea:\*\*\s*#(\d+)",
+            r"from idea #(\d+)",
+            r"idea #(\d+)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, plan_issue.body, re.IGNORECASE)
+            if match:
+                return int(match.group(1))
+
+        return None
+
+    def reject_plan_manually(self, plan_number: int) -> dict:
+        """
+        Manually reject a plan by issue number.
+
+        This is for CLI use when a user wants to reject a specific plan.
+
+        Args:
+            plan_number: The PLAN issue number to reject
+
+        Returns:
+            Result summary
+        """
+        try:
+            plan_issue = self.github.get_issue(plan_number)
+
+            # Verify it's a plan
+            if not plan_issue.has_label(Labels.TYPE_PLAN):
+                return {"error": f"Issue #{plan_number} is not a PLAN issue"}
+
+            # Verify it's not already closed
+            if plan_issue.state == "closed":
+                return {"error": f"Plan #{plan_number} is already closed"}
+
+            # Process the rejection
+            success = self._process_rejected_plan(plan_issue)
+
+            if success:
+                return {
+                    "success": True,
+                    "message": f"Plan #{plan_number} rejected and idea reset for re-planning",
+                }
+            else:
+                return {"error": "Failed to process plan rejection"}
+
+        except Exception as e:
+            return {"error": str(e)}

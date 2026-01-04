@@ -405,6 +405,8 @@ def backlog_run(
         console.print(f"  Trend-based ideas: {results['trend_ideas_generated']}")
         if results.get('trends_analyzed'):
             console.print(f"  Trend analysis: [green]completed[/green]")
+        if results.get('plans_rejected', 0) > 0:
+            console.print(f"  Plans rejected: {results['plans_rejected']}")
         console.print(f"  Plans generated: {results['plans_generated']}")
         console.print(f"  Dev projects started: {results['devs_started']}")
 
@@ -474,6 +476,8 @@ def backlog_process(max: int, dry_run: bool):
             sys.exit(1)
 
         console.print("\n[bold]Results:[/bold]")
+        if results.get('plans_rejected', 0) > 0:
+            console.print(f"  Plans rejected: {results['plans_rejected']}")
         console.print(f"  Plans generated: {results['plans_generated']}")
         console.print(f"  Dev projects started: {results['devs_started']}")
 
@@ -529,7 +533,73 @@ def backlog_status(as_json: bool):
 
         console.print("\n[dim]To promote an idea: Add 'promote:to-plan' label[/dim]")
         console.print("[dim]To start development: Add 'promote:to-dev' label[/dim]")
+        console.print("[dim]To reject a plan: Add 'reject:plan' label or use 'ao backlog reject'[/dim]")
         console.print("[dim]To see trend analysis: Run 'ao backlog trends-status'[/dim]")
+
+    except Exception as e:
+        console.print(f"[bold red]Error: {e}[/bold red]")
+        sys.exit(1)
+
+
+@backlog.command("reject")
+@click.argument("plan_number", type=int)
+@click.option("--force", "-f", is_flag=True, help="Skip confirmation")
+def backlog_reject(plan_number: int, force: bool):
+    """
+    Reject a PLAN and reset its idea for re-planning.
+
+    This will:
+    1. Close the specified PLAN issue
+    2. Reset the original IDEA to backlog with promote:to-plan label
+    3. A new plan will be generated in the next orchestrator cycle
+
+    Example:
+        ao backlog reject 42
+    """
+    # Validate environment
+    validate_backlog_env_or_exit()
+
+    orchestrator = BacklogOrchestrator()
+
+    try:
+        # Get plan info first
+        from .github_client import Labels
+
+        plan_issue = orchestrator.github.get_issue(plan_number)
+
+        if not plan_issue.has_label(Labels.TYPE_PLAN):
+            console.print(f"[bold red]Error: Issue #{plan_number} is not a PLAN issue[/bold red]")
+            sys.exit(1)
+
+        if plan_issue.state == "closed":
+            console.print(f"[bold red]Error: Plan #{plan_number} is already closed[/bold red]")
+            sys.exit(1)
+
+        # Show plan info
+        console.print(Panel(
+            f"[bold]#{plan_number}:[/bold] {plan_issue.title}\n"
+            f"[dim]State: {plan_issue.state}[/dim]",
+            title="Plan to Reject",
+            border_style="yellow",
+        ))
+
+        # Confirm
+        if not force:
+            if not click.confirm("Are you sure you want to reject this plan?"):
+                console.print("[yellow]Cancelled[/yellow]")
+                return
+
+        # Reject the plan
+        with console.status("[bold green]Rejecting plan...[/bold green]"):
+            result = orchestrator.reject_plan_manually(plan_number)
+
+        if "error" in result:
+            console.print(f"[bold red]Error: {result['error']}[/bold red]")
+            sys.exit(1)
+
+        console.print(f"[bold green]Success![/bold green] {result['message']}")
+        console.print("\n[dim]The idea has been reset and will be re-planned in the next cycle.[/dim]")
+        console.print("[dim]Run 'ao backlog process' to generate a new plan immediately.[/dim]")
 
     except Exception as e:
         console.print(f"[bold red]Error: {e}[/bold red]")

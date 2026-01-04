@@ -7,6 +7,51 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-01-04
+
+### Added
+
+#### Multi-Agent Debate System for PLAN Generation
+- **4 Debate Roles**: Founder, VC (a16z/Sequoia level), Accelerator (YC/Techstars level), Founder Friend
+- **3 AI Providers**: Claude, ChatGPT, Gemini rotate roles each round for diverse perspectives
+- **Role Rotation**: Each round assigns different AI to different roles
+- **Early Termination**: Debate ends when founder judges "Sufficiently Improved" or max 5 rounds
+- **Discussion Records**: Full debate history saved as collapsible GitHub comments
+
+#### Debate Module (`src/agentic_orchestrator/debate/`)
+- `roles.py` - Role definitions with bilingual prompts (English + Korean)
+- `moderator.py` - Round rotation matrix and termination logic
+- `debate_session.py` - Full debate session orchestration
+- `discussion_record.py` - GitHub comment formatting
+
+#### Plan Rejection Workflow
+- **`reject:plan` Label**: Reject a PLAN and regenerate from original idea
+- **`ao backlog reject <plan_number>`**: CLI command to reject plans
+- **Automatic Reset**: Rejected plan closes, original idea gets `promote:to-plan` restored
+
+#### Bilingual Support
+- All debate prompts in English with Korean translation request
+- Discussion records display in "English / 한국어" format
+- Plan extraction uses `[PLAN_START]`/`[PLAN_END]` markers for reliability
+
+### Changed
+
+- PlanGenerator now uses multi-agent debate when all 3 providers available
+- Falls back to single-agent generation if providers unavailable
+- Rejection processing runs before promotion processing in `run_cycle()`
+- `_find_existing_plan_for_idea()` only searches open issues (ignores closed/rejected)
+
+### Configuration
+
+New `debate` section in `config.yaml`:
+```yaml
+debate:
+  enabled: true
+  max_rounds: 5
+  min_rounds: 1
+  require_all_approval: false
+```
+
 ## [0.3.0] - 2026-01-04
 
 ### Added

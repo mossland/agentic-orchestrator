@@ -213,6 +213,35 @@ class Config:
             "limits", "loop", "delay_seconds", default=10
         )
 
+    # Debate Configuration
+    @property
+    def debate_enabled(self) -> bool:
+        """Check if multi-agent debate mode is enabled for plan generation."""
+        return get_env_bool("DEBATE_ENABLED", default=True) and self.get(
+            "debate", "enabled", default=True
+        )
+
+    @property
+    def debate_max_rounds(self) -> int:
+        """Get maximum number of debate rounds."""
+        return get_env_int("DEBATE_MAX_ROUNDS") or self.get(
+            "debate", "max_rounds", default=5
+        )
+
+    @property
+    def debate_min_rounds(self) -> int:
+        """Get minimum debate rounds before early termination allowed."""
+        return get_env_int("DEBATE_MIN_ROUNDS") or self.get(
+            "debate", "min_rounds", default=1
+        )
+
+    @property
+    def debate_require_all_approval(self) -> bool:
+        """Check if all reviewers must approve for early termination."""
+        return get_env_bool("DEBATE_REQUIRE_ALL_APPROVAL", default=False) and self.get(
+            "debate", "require_all_approval", default=False
+        )
+
     # Quality Configuration
     @property
     def required_review_score(self) -> float:

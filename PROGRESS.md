@@ -183,6 +183,48 @@
 
 ---
 
+## Phase 6: 멀티 에이전트 토론 시스템 (v0.4.0) ✅
+
+### 완료 항목
+
+#### 토론 시스템 아키텍처
+- [x] 4개 역할 정의: Founder, VC, Accelerator, Founder Friend
+- [x] 3개 AI 프로바이더 순환: Claude, ChatGPT, Gemini
+- [x] 라운드별 역할 배정 매트릭스
+- [x] 최대 5라운드, 조기 종료 조건
+
+#### 토론 모듈 (`src/agentic_orchestrator/debate/`)
+- [x] `__init__.py` - 모듈 exports
+- [x] `roles.py` - 역할 enum + 이중 언어 프롬프트
+- [x] `moderator.py` - 순환 매트릭스 + 종료 로직
+- [x] `debate_session.py` - 토론 세션 관리
+- [x] `discussion_record.py` - GitHub 댓글 포맷팅
+
+#### 역할별 프롬프트
+- [x] Founder: 초기 기획서 생성 + 피드백 반영
+- [x] VC: 시장/투자 관점 피드백
+- [x] Accelerator: 실행/검증 관점 피드백 (YC/Techstars 스타일)
+- [x] Founder Friend: 동료 창업자 관점 피드백
+
+#### Plan 거부 워크플로우
+- [x] `reject:plan` 라벨 추가
+- [x] `GitHubClient.reject_plan()` 메서드
+- [x] `GitHubClient.find_rejected_plans()` 메서드
+- [x] `GitHubClient.reset_idea_for_replanning()` 메서드
+- [x] `BacklogOrchestrator._process_rejected_plan()` 메서드
+- [x] `ao backlog reject <plan_number>` CLI 명령어
+
+#### 이중 언어 지원
+- [x] 영어 기본 + 한국어 번역 요청 형식
+- [x] 토론 기록 "English / 한국어" 표시
+- [x] `[PLAN_START]`/`[PLAN_END]` 마커로 기획서 추출
+
+#### 버그 수정
+- [x] 거부 처리가 프로모션 처리 전에 실행되도록 순서 변경
+- [x] `_find_existing_plan_for_idea()`가 열린 이슈만 검색
+
+---
+
 ## 커밋 히스토리
 
 ```
@@ -229,13 +271,19 @@ agentic-orchestrator/
 │   ├── state.py                # 상태 관리
 │   ├── handlers/               # 스테이지 핸들러
 │   ├── providers/              # LLM 어댑터
-│   ├── trends/                 # 트렌드 분석 모듈 ⭐ NEW
+│   ├── trends/                 # 트렌드 분석 모듈
 │   │   ├── __init__.py
 │   │   ├── models.py           # 데이터 모델
 │   │   ├── feeds.py            # RSS 피드 파싱
 │   │   ├── analyzer.py         # 트렌드 분석
 │   │   └── storage.py          # 저장소
-│   └── utils/                  # 유틸리티
+│   ├── debate/                 # 멀티 에이전트 토론 모듈 ⭐ NEW
+│   │   ├── __init__.py
+│   │   ├── roles.py            # 역할 정의 + 이중 언어 프롬프트
+│   │   ├── moderator.py        # 라운드 순환 로직
+│   │   ├── debate_session.py   # 토론 세션 관리
+│   │   └── discussion_record.py # 토론 기록 포맷팅
+│   └── utils/                  # 유틸리티 (debate 설정 추가)
 ├── tests/
 │   ├── test_backlog.py         # 백로그 테스트
 │   ├── test_orchestrator.py
@@ -316,4 +364,4 @@ ao backlog run
 
 ---
 
-*마지막 업데이트: 2026-01-04*
+*마지막 업데이트: 2026-01-04 (v0.4.0)*

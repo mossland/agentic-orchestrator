@@ -87,7 +87,7 @@ Prioritize trends with:
             TrendAnalysis containing identified trends.
         """
         if not items:
-            logger.warning(f"No items to analyze for period {period}")
+            logger.warning(f"[{period}] No items to analyze - returning empty analysis")
             return TrendAnalysis(
                 date=datetime.utcnow(),
                 period=period,
@@ -96,24 +96,20 @@ Prioritize trends with:
                 sources_analyzed=[],
             )
 
-        # Limit articles for analysis
         analysis_items = items[: self.MAX_ARTICLES_PER_ANALYSIS]
-
-        # Get unique sources and categories
         sources = list({item.source for item in analysis_items})
         categories = list({item.category for item in analysis_items})
 
+        logger.info(
+            f"[{period}] Analyzing {len(analysis_items)} items from {len(sources)} sources: {sources}"
+        )
+
         if self.dry_run:
-            logger.info(f"[DRY RUN] Would analyze {len(analysis_items)} items for {period}")
+            logger.info(f"[{period}] [DRY RUN] Skipping Claude API call")
             return self._create_mock_analysis(analysis_items, period, sources, categories)
 
-        # Build and send analysis prompt
         prompt = self._build_analysis_prompt(analysis_items, period, max_trends)
-
-        logger.debug(f"Sending analysis prompt ({len(prompt)} chars) for period {period}")
-        logger.debug(
-            f"Prompt preview: {prompt[:300]}..." if len(prompt) > 300 else f"Prompt: {prompt}"
-        )
+        logger.info(f"[{period}] Sending prompt to Claude ({len(prompt)} chars)")
 
         try:
             response = self.claude.chat(
@@ -121,14 +117,11 @@ Prioritize trends with:
                 system_message=self.SYSTEM_MESSAGE,
             )
 
-            logger.debug(
-                f"Received response from Claude: {type(response)}, length: {len(response) if response else 0}"
-            )
+            response_len = len(response) if response else 0
+            logger.info(f"[{period}] Claude response received: {response_len} chars")
 
-            # Check for empty response
             if not response or not response.strip():
-                logger.warning(f"Empty response from Claude for period {period}")
-                logger.warning(f"Response value: repr={repr(response)}")
+                logger.error(f"[{period}] Empty response from Claude! repr={repr(response)}")
                 return TrendAnalysis(
                     date=datetime.utcnow(),
                     period=period,
@@ -138,10 +131,14 @@ Prioritize trends with:
                     categories_analyzed=categories,
                 )
 
-            # Parse response into trends
-            trends = self._parse_trends_response(response, period)
+            if response_len < 100:
+                logger.warning(f"[{period}] Suspiciously short response: {response}")
 
-            logger.info(f"Identified {len(trends)} trends for period {period}")
+            trends = self._parse_trends_response(response, period)
+            logger.info(f"[{period}] Parsed {len(trends)} trends successfully")
+
+            if len(trends) == 0:
+                logger.warning(f"[{period}] No trends parsed! Response preview: {response[:500]}")
 
             return TrendAnalysis(
                 date=datetime.utcnow(),
@@ -153,8 +150,10 @@ Prioritize trends with:
             )
 
         except Exception as e:
-            logger.error(f"Trend analysis failed: {e}")
-            # Return empty analysis on failure
+            logger.error(f"[{period}] Trend analysis exception: {type(e).__name__}: {e}")
+            import traceback
+
+            logger.error(f"[{period}] Traceback: {traceback.format_exc()}")
             return TrendAnalysis(
                 date=datetime.utcnow(),
                 period=period,

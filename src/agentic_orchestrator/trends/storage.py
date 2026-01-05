@@ -87,9 +87,7 @@ class TrendStorage:
 
         total_trends = sum(len(a.trends) for a in analyses.values())
         if total_trends == 0:
-            logger.warning(
-                f"Skipping save: no trends in analysis for {date.strftime('%Y-%m-%d')}"
-            )
+            logger.warning(f"Skipping save: no trends in analysis for {date.strftime('%Y-%m-%d')}")
             return None
 
         if file_path.exists():
@@ -443,8 +441,10 @@ class TrendStorage:
         Returns:
             Number of files deleted.
         """
-        days_to_retain: int = retention_days if retention_days is not None else (
-            self.config.get("trends", "storage", "retention_days", default=90) or 90
+        days_to_retain: int = (
+            retention_days
+            if retention_days is not None
+            else (self.config.get("trends", "storage", "retention_days", default=90) or 90)
         )
         cutoff = datetime.utcnow() - timedelta(days=days_to_retain)
         deleted = 0

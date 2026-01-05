@@ -375,23 +375,44 @@ class TrendBasedIdeaGenerator:
         Returns:
             Dictionary mapping period to TrendAnalysis.
         """
-        logger.info("Starting daily trend analysis")
+        logger.info("=" * 60)
+        logger.info("TREND ANALYSIS START")
+        logger.info("=" * 60)
 
-        # Fetch all feeds
+        logger.info("[Step 1/3] Fetching RSS feeds...")
         items = self.fetcher.fetch_all_feeds()
-        logger.info(f"Fetched {len(items)} items from feeds")
+        logger.info(f"[Step 1/3] Result: {len(items)} total items fetched")
 
         if not items:
-            logger.warning("No feed items fetched, skipping analysis")
+            logger.error("[Step 1/3] FAILED: No feed items fetched!")
+            logger.info("=" * 60)
             return {}
 
-        # Analyze trends for all periods
+        logger.info("[Step 2/3] Analyzing trends with Claude...")
         analyses = self.analyzer.analyze_all_periods(items)
 
-        # Store results
+        total_trends = sum(len(a.trends) for a in analyses.values())
+        logger.info(f"[Step 2/3] Result: {total_trends} trends across {len(analyses)} periods")
+
+        for period, analysis in analyses.items():
+            logger.info(
+                f"  - {period}: {len(analysis.trends)} trends, "
+                f"{analysis.raw_article_count} articles"
+            )
+
+        logger.info("[Step 3/3] Saving analysis...")
         if not self.dry_run and analyses:
             file_path = self.storage.save_analysis(analyses)
-            logger.info(f"Saved trend analysis to {file_path}")
+            if file_path:
+                logger.info(f"[Step 3/3] Saved to {file_path}")
+            else:
+                logger.warning("[Step 3/3] Save skipped (empty or existing file has more)")
+        else:
+            logger.info("[Step 3/3] Skipped (dry run or no analyses)")
+
+        logger.info("=" * 60)
+        logger.info(f"TREND ANALYSIS COMPLETE: {total_trends} trends found")
+        logger.info("=" * 60)
 
         return analyses
 

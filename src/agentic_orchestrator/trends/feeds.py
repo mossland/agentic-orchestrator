@@ -103,19 +103,27 @@ class FeedFetcher:
             List of FeedItem objects from all feeds.
         """
         all_items: list[FeedItem] = []
-        failed_feeds: list[str] = []
+        failed_feeds: list[tuple[str, str]] = []
+        success_feeds: list[tuple[str, int]] = []
+
+        logger.info(f"Starting to fetch {len(self.feed_configs)} configured feeds...")
 
         for feed_config in self.feed_configs:
             try:
                 items = self.fetch_feed(feed_config)
                 all_items.extend(items)
-                logger.debug(f"Fetched {len(items)} items from {feed_config.name}")
+                success_feeds.append((feed_config.name, len(items)))
+                logger.info(f"  ✓ {feed_config.name}: {len(items)} items")
             except Exception as e:
-                logger.warning(f"Failed to fetch {feed_config.name}: {e}")
-                failed_feeds.append(feed_config.name)
+                error_msg = str(e)[:100]
+                failed_feeds.append((feed_config.name, error_msg))
+                logger.error(f"  ✗ {feed_config.name}: {error_msg}")
 
+        logger.info(
+            f"Feed fetch summary: {len(success_feeds)} succeeded, {len(failed_feeds)} failed"
+        )
         if failed_feeds:
-            logger.warning(f"Failed to fetch {len(failed_feeds)} feeds: {', '.join(failed_feeds)}")
+            logger.warning(f"Failed feeds: {[f[0] for f in failed_feeds]}")
 
         # Remove duplicates by URL
         seen_urls = set()
@@ -307,10 +315,23 @@ class FeedFetcher:
         """
         hours = self.PERIOD_HOURS.get(period, 24)
         cutoff = datetime.utcnow() - timedelta(hours=hours)
+        now = datetime.utcnow()
 
         filtered = [item for item in items if item.published >= cutoff]
 
-        logger.debug(f"Filtered {len(items)} items to {len(filtered)} within {period}")
+        logger.info(
+            f"Period filter [{period}]: {len(filtered)}/{len(items)} items "
+            f"(cutoff: {cutoff.strftime('%Y-%m-%d %H:%M')} UTC)"
+        )
+
+        if len(filtered) == 0 and len(items) > 0:
+            oldest = min(items, key=lambda x: x.published)
+            newest = max(items, key=lambda x: x.published)
+            logger.warning(
+                f"All items filtered out! Article date range: "
+                f"{oldest.published.strftime('%Y-%m-%d %H:%M')} ~ "
+                f"{newest.published.strftime('%Y-%m-%d %H:%M')} UTC"
+            )
 
         return filtered
 

@@ -103,5 +103,19 @@
     "trend_category": "ai",
     "analysis_date": "2026-01-12T23:04:44.246869",
     "created_at": "2026-01-12T23:04:44.246872"
+  },
+  {
+    "idea_issue_number": 39,
+    "trend_topic": "Enterprise AI Agent Scaling",
+    "trend_category": "ai",
+    "analysis_date": "2026-01-13T23:04:31.614545",
+    "created_at": "2026-01-13T23:04:31.614551"
+  },
+  {
+    "idea_issue_number": 40,
+    "trend_topic": "Apple-Google AI Collaboration",
+    "trend_category": "ai",
+    "analysis_date": "2026-01-13T23:05:04.458793",
+    "created_at": "2026-01-13T23:05:04.458798"
   }
 ]

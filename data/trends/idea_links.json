@@ -215,5 +215,19 @@
     "trend_category": "ai",
     "analysis_date": "2026-01-20T23:05:02.842694",
     "created_at": "2026-01-20T23:05:02.842699"
+  },
+  {
+    "idea_issue_number": 63,
+    "trend_topic": "AI Education Tools Expansion",
+    "trend_category": "ai",
+    "analysis_date": "2026-01-21T23:06:03.139112",
+    "created_at": "2026-01-21T23:06:03.139119"
+  },
+  {
+    "idea_issue_number": 64,
+    "trend_topic": "Enterprise AI Agent Integration",
+    "trend_category": "ai",
+    "analysis_date": "2026-01-21T23:06:34.914224",
+    "created_at": "2026-01-21T23:06:34.914228"
   }
 ]

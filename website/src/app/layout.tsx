@@ -1,29 +1,43 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono } from "next/font/google";
 import { I18nProvider } from "@/lib/i18n";
 import { Navigation } from "@/components/Navigation";
 import { Footer } from "@/components/Footer";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Mossland Agentic Orchestrator",
-  description: "모스랜드 생태계를 위한 자율 AI 오케스트레이션 시스템",
+  title: "MOSS.AO // Agentic Orchestrator",
+  description: "Multi-agent AI orchestration system for Mossland ecosystem",
+  keywords: ["AI", "agents", "orchestrator", "mossland", "crypto", "debate"],
+  authors: [{ name: "Mossland" }],
   openGraph: {
-    title: "Mossland Agentic Orchestrator",
-    description: "모스랜드 생태계를 위한 자율 AI 오케스트레이션 시스템",
+    title: "MOSS.AO // Agentic Orchestrator",
+    description: "Multi-agent AI orchestration system for Mossland ecosystem",
     url: "https://ao.moss.land",
     siteName: "Mossland AO",
     type: "website",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "Mossland Agentic Orchestrator",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "MOSS.AO // Agentic Orchestrator",
+    description: "Multi-agent AI orchestration system for Mossland ecosystem",
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 
@@ -33,16 +47,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-zinc-950`}
-      >
+    <html lang="ko" className="dark">
+      <head>
+        <meta name="theme-color" content="#0a0a0a" />
+        <meta name="color-scheme" content="dark" />
+      </head>
+      <body className={`${jetbrainsMono.variable} font-mono antialiased`}>
         <I18nProvider>
-          <Navigation />
-          <main className="min-h-screen">
-            {children}
-          </main>
-          <Footer />
+          <div className="relative min-h-screen bg-[#0a0a0a]">
+            <Navigation />
+            <main className="relative z-10">
+              {children}
+            </main>
+            <Footer />
+          </div>
         </I18nProvider>
       </body>
     </html>

@@ -11,30 +11,37 @@ interface ActivityFeedProps {
 export function ActivityFeed({ activities }: ActivityFeedProps) {
   const { t } = useI18n();
 
-  const typeStyles: Record<string, { color: string; prefix: string }> = {
-    trend: { color: 'text-blue-400', prefix: t('activity.trend') },
-    idea: { color: 'text-yellow-400', prefix: t('activity.idea') },
-    plan: { color: 'text-purple-400', prefix: t('activity.plan') },
-    debate: { color: 'text-orange-400', prefix: t('activity.debate') },
-    dev: { color: 'text-green-400', prefix: t('activity.dev') },
-    system: { color: 'text-zinc-400', prefix: t('activity.system') },
+  const typeStyles: Record<string, { color: string; prefix: string; icon: string }> = {
+    trend: { color: 'text-[#00ffff]', prefix: 'SIGNAL', icon: '◈' },
+    idea: { color: 'text-[#f1fa8c]', prefix: 'IDEA', icon: '◆' },
+    plan: { color: 'text-[#bd93f9]', prefix: 'PLAN', icon: '◇' },
+    debate: { color: 'text-[#ff6b35]', prefix: 'DEBATE', icon: '◉' },
+    dev: { color: 'text-[#39ff14]', prefix: 'DEV', icon: '●' },
+    system: { color: 'text-[#6b7280]', prefix: 'SYS', icon: '○' },
   };
 
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-950 p-4">
+    <div className="h-full">
+      {/* Header */}
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-mono text-sm text-zinc-500">{t('activity.title')}</h3>
+        <div className="flex items-center gap-2">
+          <span className="text-[#bd93f9] text-xs">#</span>
+          <span className="text-[#6b7280] text-xs">Real-time activity stream</span>
+        </div>
         <motion.div
           className="flex items-center gap-1.5"
           animate={{ opacity: [1, 0.5, 1] }}
           transition={{ duration: 2, repeat: Infinity }}
         >
-          <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-          <span className="font-mono text-xs text-green-500">{t('activity.streaming')}</span>
+          <div className="status-dot online" style={{ width: 6, height: 6 }} />
+          <span className="text-[10px] text-[#39ff14] uppercase tracking-wider">
+            {t('activity.streaming')}
+          </span>
         </motion.div>
       </div>
 
-      <div className="h-64 overflow-y-auto font-mono text-sm">
+      {/* Activity log */}
+      <div className="h-64 overflow-y-auto text-xs space-y-0.5">
         {activities.map((activity, index) => {
           const style = typeStyles[activity.type] || typeStyles.system;
           return (
@@ -42,22 +49,52 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
               key={index}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="flex gap-2 py-1"
+              transition={{ delay: index * 0.03 }}
+              className="flex items-start gap-2 py-1 hover:bg-[#21262d]/50 px-1 -mx-1 transition-colors"
             >
-              <span className="text-zinc-600">[{activity.time}]</span>
-              <span className={`${style.color} min-w-16`}>{style.prefix}</span>
-              <span className="text-zinc-300">{activity.message}</span>
+              {/* Timestamp */}
+              <span className="text-[#6b7280] shrink-0 tabular-nums">
+                [{activity.time}]
+              </span>
+
+              {/* Type indicator */}
+              <span className={`${style.color} shrink-0 w-14 flex items-center gap-1`}>
+                <span>{style.icon}</span>
+                <span className="uppercase text-[10px] tracking-wide">{style.prefix}</span>
+              </span>
+
+              {/* Message */}
+              <span className="text-[#c0c0c0] flex-1">
+                {activity.message}
+              </span>
             </motion.div>
           );
         })}
+
+        {/* Cursor */}
         <motion.div
-          className="flex items-center gap-2 py-1 text-zinc-600"
+          className="flex items-center gap-2 py-1 text-[#39ff14]"
           animate={{ opacity: [0.3, 1, 0.3] }}
           transition={{ duration: 1, repeat: Infinity }}
         >
+          <span className="text-[#6b7280]">[--:--:--]</span>
           <span>▋</span>
         </motion.div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-3 pt-2 border-t border-[#21262d] flex items-center justify-between text-[10px]">
+        <span className="text-[#6b7280]">
+          Showing last {activities.length} events
+        </span>
+        <div className="flex items-center gap-3">
+          {Object.entries(typeStyles).slice(0, 4).map(([key, style]) => (
+            <span key={key} className={`${style.color} flex items-center gap-1`}>
+              <span>{style.icon}</span>
+              <span className="uppercase">{key}</span>
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

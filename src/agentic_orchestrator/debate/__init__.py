@@ -1,38 +1,31 @@
 """
 Multi-agent debate system for PLAN generation.
 
-This module provides a debate-based approach to generating planning documents
-where multiple AI personas (Founder, VC, Accelerator, Founder Friend) discuss
-and refine the plan through iterative rounds.
+This module provides two debate approaches:
 
-Usage:
+1. Legacy 4-role debate (DebateSession):
+   - Founder, VC, Accelerator, Founder Friend
+   - Uses paid API providers (Claude, OpenAI, Gemini)
+
+2. Multi-stage debate with diverse personas (MultiStageDebate):
+   - 34 agents with unique personalities
+   - Three phases: Divergence → Convergence → Planning
+   - Hybrid LLM routing (local Ollama + API fallback)
+
+Usage (Legacy):
     from agentic_orchestrator.debate import (
         DebateSession,
         create_debate_session,
-        Role,
-        DebateResult,
     )
-
-    # Create a debate session
-    session = create_debate_session(
-        idea_title="[IDEA] New Feature",
-        idea_content="Feature description...",
-        idea_issue_number=123,
-        providers={
-            "claude": claude_provider,
-            "openai": openai_provider,
-            "gemini": gemini_provider,
-        },
-    )
-
-    # Run the debate
+    session = create_debate_session(...)
     result = session.run_debate()
 
-    # Get the final plan
-    final_plan = result.final_plan
-
-    # Get formatted discussion record for GitHub
-    discussion_comment = result.format_discussion_record()
+Usage (Multi-stage):
+    from agentic_orchestrator.debate import (
+        MultiStageDebate,
+        run_multi_stage_debate,
+    )
+    result = await run_multi_stage_debate(router, topic, context)
 """
 
 from .debate_session import (
@@ -63,19 +56,34 @@ from .roles import (
     get_feedback_roles,
     get_role_config,
 )
+from .protocol import (
+    DebatePhase,
+    DebateProtocol,
+    DebateProtocolConfig,
+    DebateMessage,
+    DebateRound,
+    PhaseResult,
+    MessageType,
+)
+from .multi_stage import (
+    Idea,
+    MultiStageDebate,
+    MultiStageDebateResult,
+    run_multi_stage_debate,
+)
 
 __all__ = [
-    # Roles
+    # Roles (legacy)
     "Role",
     "RoleConfig",
     "get_role_config",
     "get_all_roles",
     "get_feedback_roles",
     "ROLE_CONFIGS",
-    # Moderator
+    # Moderator (legacy)
     "DebateModerator",
     "RoundAssignment",
-    # Records
+    # Records (legacy)
     "DebateRecord",
     "RoundData",
     "FeedbackEntry",
@@ -85,8 +93,21 @@ __all__ = [
     "create_round_data",
     "create_feedback_entry",
     "create_founder_decision",
-    # Session
+    # Session (legacy)
     "DebateSession",
     "DebateResult",
     "create_debate_session",
+    # Protocol (new)
+    "DebatePhase",
+    "DebateProtocol",
+    "DebateProtocolConfig",
+    "DebateMessage",
+    "DebateRound",
+    "PhaseResult",
+    "MessageType",
+    # Multi-stage debate (new)
+    "Idea",
+    "MultiStageDebate",
+    "MultiStageDebateResult",
+    "run_multi_stage_debate",
 ]

@@ -109,9 +109,10 @@ class Database:
 
     def health_check(self) -> bool:
         """Check if database connection is healthy."""
+        from sqlalchemy import text
         try:
             with self.session() as session:
-                session.execute("SELECT 1")
+                session.execute(text("SELECT 1"))
             return True
         except Exception:
             return False

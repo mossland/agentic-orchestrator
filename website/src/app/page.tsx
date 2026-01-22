@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { SystemStatus } from '@/components/SystemStatus';
@@ -7,7 +8,9 @@ import { StatsGrid } from '@/components/Stats';
 import { Pipeline } from '@/components/Pipeline';
 import { ActivityFeed } from '@/components/ActivityFeed';
 import { TerminalWindow } from '@/components/TerminalWindow';
-import { mockStats, mockActivity, mockPipeline, rssCategories, aiProviders } from '@/data/mock';
+import { rssCategories, aiProviders, mockStats, mockActivity, mockPipeline } from '@/data/mock';
+import { fetchSystemStats, fetchActivity, fetchPipeline } from '@/lib/api';
+import type { SystemStats, ActivityItem, PipelineStage } from '@/lib/types';
 
 const ASCII_LOGO = `
 ███╗   ███╗ ██████╗ ███████╗███████╗    █████╗  ██████╗
@@ -20,6 +23,35 @@ const ASCII_LOGO = `
 
 export default function Dashboard() {
   const { t } = useI18n();
+  const [stats, setStats] = useState<SystemStats>(mockStats);
+  const [activity, setActivity] = useState<ActivityItem[]>(mockActivity);
+  const [pipeline, setPipeline] = useState<PipelineStage[]>(mockPipeline);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [statsData, activityData, pipelineData] = await Promise.all([
+          fetchSystemStats(),
+          fetchActivity(),
+          fetchPipeline(),
+        ]);
+        setStats(statsData);
+        setActivity(activityData);
+        setPipeline(pipelineData);
+      } catch (error) {
+        console.error('Failed to load dashboard data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+
+    // Refresh data every 30 seconds
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] pt-12">
@@ -47,7 +79,7 @@ export default function Dashboard() {
           transition={{ delay: 0.1 }}
           className="mb-6"
         >
-          <SystemStatus lastRun={mockStats.lastRun} nextRun={mockStats.nextRun} />
+          <SystemStatus lastRun={stats.lastRun} nextRun={stats.nextRun} />
         </motion.div>
 
         {/* Stats Grid */}
@@ -57,7 +89,7 @@ export default function Dashboard() {
           transition={{ delay: 0.2 }}
           className="mb-6"
         >
-          <StatsGrid stats={mockStats} />
+          <StatsGrid stats={stats} />
         </motion.div>
 
         {/* Pipeline Visualization */}
@@ -67,7 +99,7 @@ export default function Dashboard() {
           transition={{ delay: 0.3 }}
           className="mb-6"
         >
-          <Pipeline stages={mockPipeline} />
+          <Pipeline stages={pipeline} />
         </motion.div>
 
         {/* Two Column Layout */}
@@ -79,7 +111,7 @@ export default function Dashboard() {
             transition={{ delay: 0.4 }}
           >
             <TerminalWindow title="activity.log" showDots>
-              <ActivityFeed activities={mockActivity} />
+              <ActivityFeed activities={activity} />
             </TerminalWindow>
           </motion.div>
 

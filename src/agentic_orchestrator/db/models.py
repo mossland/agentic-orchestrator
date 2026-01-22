@@ -193,7 +193,7 @@ class Idea(Base):
     github_issue_id = Column(Integer)
     github_issue_url = Column(Text)
     score = Column(Float, default=0.0)
-    metadata = Column(JSON)
+    extra_metadata = Column("metadata", JSON)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -229,7 +229,7 @@ class DebateSession(Base):
     participants = Column(JSON)  # List of agent IDs
     summary = Column(Text)
     outcome = Column(String(20))  # selected, rejected, needs_refinement
-    metadata = Column(JSON)
+    extra_metadata = Column("metadata", JSON)
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -312,7 +312,7 @@ class Plan(Base):
     github_issue_id = Column(Integer)
     github_issue_url = Column(Text)
 
-    metadata = Column(JSON)
+    extra_metadata = Column("metadata", JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -406,7 +406,7 @@ class AgentState(Base):
     total_messages = Column(Integer, default=0)
     total_tokens = Column(Integer, default=0)
     personality_config = Column(JSON)
-    metadata = Column(JSON)
+    extra_metadata = Column("metadata", JSON)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

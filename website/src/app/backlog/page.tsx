@@ -1,26 +1,50 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { IdeaCard } from '@/components/IdeaCard';
 import { mockIdeas, mockPlans } from '@/data/mock';
+import { fetchIdeas, fetchPlans } from '@/lib/api';
+import type { Idea, Plan } from '@/lib/types';
 
 export default function BacklogPage() {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'ideas' | 'plans' | 'in-dev'>('ideas');
+  const [ideas, setIdeas] = useState<Idea[]>(mockIdeas);
+  const [plans, setPlans] = useState<Plan[]>(mockPlans);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const [ideasData, plansData] = await Promise.all([
+          fetchIdeas(),
+          fetchPlans(),
+        ]);
+        setIdeas(ideasData);
+        setPlans(plansData);
+      } catch (error) {
+        console.error('Failed to load backlog data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   const tabs = [
-    { id: 'ideas' as const, label: t('backlog.ideas'), count: mockIdeas.length },
-    { id: 'plans' as const, label: t('backlog.plans'), count: mockPlans.length },
-    { id: 'in-dev' as const, label: t('backlog.inDevelopment'), count: mockIdeas.filter(i => i.status === 'in-dev').length },
+    { id: 'ideas' as const, label: t('backlog.ideas'), count: ideas.length },
+    { id: 'plans' as const, label: t('backlog.plans'), count: plans.length },
+    { id: 'in-dev' as const, label: t('backlog.inDevelopment'), count: ideas.filter(i => i.status === 'in-dev').length },
   ];
 
   const filteredIdeas = activeTab === 'in-dev'
-    ? mockIdeas.filter(i => i.status === 'in-dev')
+    ? ideas.filter(i => i.status === 'in-dev')
     : activeTab === 'plans'
-    ? mockIdeas.filter(i => i.status === 'planned')
-    : mockIdeas;
+    ? ideas.filter(i => i.status === 'planned')
+    : ideas;
 
   return (
     <div className="min-h-screen bg-zinc-950 pt-14">
@@ -61,12 +85,18 @@ export default function BacklogPage() {
         </motion.div>
 
         <div className="grid gap-4">
-          {filteredIdeas.map((idea, index) => (
-            <IdeaCard key={idea.id} idea={idea} index={index} />
-          ))}
+          {isLoading ? (
+            <div className="text-center text-zinc-500 py-8">Loading...</div>
+          ) : filteredIdeas.length === 0 ? (
+            <div className="text-center text-zinc-500 py-8">No items found</div>
+          ) : (
+            filteredIdeas.map((idea, index) => (
+              <IdeaCard key={idea.id} idea={idea} index={index} />
+            ))
+          )}
         </div>
 
-        {activeTab === 'plans' && mockPlans.length > 0 && (
+        {activeTab === 'plans' && plans.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -74,7 +104,7 @@ export default function BacklogPage() {
           >
             <h2 className="mb-4 font-mono text-sm text-zinc-500">{t('backlog.debateHistory')}</h2>
             <div className="space-y-2">
-              {mockPlans.map((plan) => (
+              {plans.map((plan) => (
                 <div
                   key={plan.id}
                   className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-900/50 p-3"

@@ -1,14 +1,39 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { TrendCard } from '@/components/TrendCard';
-import { mockTrends, rssCategories } from '@/data/mock';
+import { rssCategories, mockTrends } from '@/data/mock';
+import { fetchTrends } from '@/lib/api';
+import type { Trend } from '@/lib/types';
 
 const categories = ['all', 'crypto', 'defi', 'ai', 'security', 'dev', 'finance'] as const;
 
 export default function TrendsPage() {
   const { t } = useI18n();
+  const [trends, setTrends] = useState<Trend[]>(mockTrends);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTrends() {
+      try {
+        const data = await fetchTrends();
+        setTrends(data);
+      } catch (error) {
+        console.error('Failed to load trends:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadTrends();
+  }, []);
+
+  const filteredTrends = selectedCategory === 'all'
+    ? trends
+    : trends.filter((t) => t.category === selectedCategory);
 
   return (
     <div className="min-h-screen bg-zinc-950 pt-14">
@@ -54,8 +79,9 @@ export default function TrendsPage() {
             {categories.map((cat) => (
               <button
                 key={cat}
+                onClick={() => setSelectedCategory(cat)}
                 className={`rounded-lg px-3 py-1.5 text-sm transition-colors ${
-                  cat === 'all'
+                  cat === selectedCategory
                     ? 'bg-green-500/20 text-green-400'
                     : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
                 }`}
@@ -67,9 +93,15 @@ export default function TrendsPage() {
         </motion.div>
 
         <div className="grid gap-4">
-          {mockTrends.map((trend, index) => (
-            <TrendCard key={trend.title} trend={trend} index={index} />
-          ))}
+          {isLoading ? (
+            <div className="text-center text-zinc-500 py-8">Loading trends...</div>
+          ) : filteredTrends.length === 0 ? (
+            <div className="text-center text-zinc-500 py-8">No trends found</div>
+          ) : (
+            filteredTrends.map((trend, index) => (
+              <TrendCard key={trend.title} trend={trend} index={index} />
+            ))
+          )}
         </div>
 
         <motion.div

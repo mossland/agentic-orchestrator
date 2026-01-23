@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiSignal } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { ScoreGauge } from '../visualization/ScoreGauge';
 import { TerminalBadge } from '../TerminalWindow';
@@ -165,7 +166,7 @@ export function SignalDetail({ data }: SignalDetailProps) {
           <div>
             <span className="text-[#6b7280]">{t('detail.collectedAt')}: </span>
             <span className="text-[#c0c0c0]">
-              {signal.collected_at ? new Date(signal.collected_at).toLocaleString() : 'N/A'}
+              {formatLocalDateTime(signal.collected_at)}
             </span>
           </div>
           {signal.url && (

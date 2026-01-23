@@ -1,6 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { formatLocalTime } from '@/lib/date';
 
 interface DebateMessage {
   id: string;
@@ -81,7 +82,7 @@ export function DebateTimeline({ messages, locale }: DebateTimelineProps) {
 
               {message.created_at && (
                 <div className="mt-1 text-[9px] text-[#3b3b3b]">
-                  {new Date(message.created_at).toLocaleTimeString()}
+                  {formatLocalTime(message.created_at)}
                 </div>
               )}
             </div>

@@ -162,6 +162,9 @@ class LLMHierarchy:
         "classification": ["llama3.2:3b"],
         "translation": ["qwen2.5:14b"],
 
+        # Trend analysis - use good local models
+        "trend_analysis": ["qwen2.5:32b", "phi4:14b"],
+
         # Critical outputs - use API models
         "final_plan": ["claude-opus-4-5", "llama3.3:70b"],  # Fallback to local
         "quality_check": ["claude-opus-4-5", "qwen2.5:32b"],

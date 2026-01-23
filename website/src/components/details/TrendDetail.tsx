@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiTrend, type ApiSignal } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { ScoreGauge } from '../visualization/ScoreGauge';
 import { TerminalBadge } from '../TerminalWindow';
@@ -123,6 +124,55 @@ export function TrendDetail({ data }: TrendDetailProps) {
         </div>
       )}
 
+      {/* Web3 Relevance */}
+      {(trend as any).web3_relevance && (
+        <div className="card-cli p-4 border-l-2 border-[#bd93f9]">
+          <div className="text-xs text-[#6b7280] uppercase mb-2">Web3 Relevance</div>
+          <p className="text-sm text-[#c0c0c0] leading-relaxed">{(trend as any).web3_relevance}</p>
+        </div>
+      )}
+
+      {/* Idea Seeds */}
+      {(trend as any).idea_seeds && (trend as any).idea_seeds.length > 0 && (
+        <div className="card-cli p-4">
+          <div className="text-xs text-[#6b7280] uppercase mb-2">💡 Idea Seeds</div>
+          <div className="space-y-2">
+            {(trend as any).idea_seeds.map((seed: string, idx: number) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="flex items-start gap-2 p-2 bg-[#39ff14]/5 border border-[#39ff14]/20 rounded"
+              >
+                <span className="text-[#39ff14]">→</span>
+                <span className="text-sm text-[#c0c0c0]">{seed}</span>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sample Headlines */}
+      {(trend as any).sample_headlines && (trend as any).sample_headlines.length > 0 && (
+        <div className="card-cli p-4">
+          <div className="text-xs text-[#6b7280] uppercase mb-2">📰 Sample Headlines</div>
+          <div className="space-y-2">
+            {(trend as any).sample_headlines.map((headline: string, idx: number) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                className="text-xs text-[#c0c0c0] p-2 bg-black/20 rounded border-l-2 border-[#00ffff]"
+              >
+                {headline}
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Keywords */}
       {trend.keywords && trend.keywords.length > 0 && (
         <div className="card-cli p-4">
@@ -138,6 +188,23 @@ export function TrendDetail({ data }: TrendDetailProps) {
               >
                 #{keyword}
               </motion.span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sources */}
+      {(trend as any).sources && (trend as any).sources.length > 0 && (
+        <div className="card-cli p-4">
+          <div className="text-xs text-[#6b7280] uppercase mb-2">Sources</div>
+          <div className="flex flex-wrap gap-2">
+            {(trend as any).sources.map((source: string, idx: number) => (
+              <span
+                key={idx}
+                className="tag tag-cyan"
+              >
+                {source}
+              </span>
             ))}
           </div>
         </div>
@@ -171,7 +238,7 @@ export function TrendDetail({ data }: TrendDetailProps) {
         <div className="text-xs">
           <span className="text-[#6b7280]">{t('detail.analyzedAt')}: </span>
           <span className="text-[#c0c0c0]">
-            {trend.analyzed_at ? new Date(trend.analyzed_at).toLocaleString() : 'N/A'}
+            {formatLocalDateTime(trend.analyzed_at)}
           </span>
         </div>
       </div>

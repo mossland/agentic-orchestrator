@@ -84,6 +84,11 @@ export interface ApiTrend {
   category: string | null;
   keywords: string[];
   analyzed_at: string | null;
+  // Rich analysis data
+  web3_relevance?: string;
+  idea_seeds?: string[];
+  sources?: string[];
+  sample_headlines?: string[];
 }
 
 export interface IdeasResponse {

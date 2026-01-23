@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiDebate } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import { useModal } from '@/components/modals/useModal';
 import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
 
@@ -365,10 +366,10 @@ export default function DebatesPage() {
                   {/* Timestamps */}
                   <div className="mt-2 flex gap-4 text-[10px] text-[#3b3b3b]">
                     {debate.started_at && (
-                      <span>Started: {new Date(debate.started_at).toLocaleString()}</span>
+                      <span>Started: {formatLocalDateTime(debate.started_at)}</span>
                     )}
                     {debate.completed_at && (
-                      <span>Completed: {new Date(debate.completed_at).toLocaleString()}</span>
+                      <span>Completed: {formatLocalDateTime(debate.completed_at)}</span>
                     )}
                   </div>
                 </motion.div>

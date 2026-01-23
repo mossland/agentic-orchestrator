@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiTrend, type ApiIdea, type ApiPlan } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import { useModal } from '@/components/modals/useModal';
 import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
 
@@ -164,12 +165,7 @@ export default function IdeasPage() {
                             {trend.signal_count} signals
                             {trend.analyzed_at && (
                               <span className="ml-2">
-                                | {new Date(trend.analyzed_at).toLocaleDateString('ko-KR', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                | {formatLocalDateTime(trend.analyzed_at)}
                               </span>
                             )}
                           </div>
@@ -200,12 +196,7 @@ export default function IdeasPage() {
                             {idea.source_type} | Score: {idea.score.toFixed(1)}
                             {idea.created_at && (
                               <span className="ml-2">
-                                | {new Date(idea.created_at).toLocaleDateString('ko-KR', {
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })}
+                                | {formatLocalDateTime(idea.created_at)}
                               </span>
                             )}
                           </div>
@@ -253,13 +244,7 @@ export default function IdeasPage() {
                           <div className="text-[10px] text-[#6b7280]">signals</div>
                           {trend.analyzed_at && (
                             <div className="text-[10px] text-[#6b7280] mt-1">
-                              {new Date(trend.analyzed_at).toLocaleDateString('ko-KR', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatLocalDateTime(trend.analyzed_at)}
                             </div>
                           )}
                         </div>
@@ -299,13 +284,7 @@ export default function IdeasPage() {
                           <p className="text-xs text-[#6b7280] mt-1 line-clamp-2">{idea.summary}</p>
                           {idea.created_at && (
                             <div className="text-[10px] text-[#6b7280] mt-2">
-                              {new Date(idea.created_at).toLocaleDateString('ko-KR', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatLocalDateTime(idea.created_at)}
                             </div>
                           )}
                         </div>
@@ -356,13 +335,7 @@ export default function IdeasPage() {
                           <h3 className="text-sm font-medium text-[#c0c0c0]">{plan.title}</h3>
                           {plan.created_at && (
                             <div className="text-[10px] text-[#6b7280] mt-1">
-                              {new Date(plan.created_at).toLocaleDateString('ko-KR', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatLocalDateTime(plan.created_at)}
                             </div>
                           )}
                         </div>

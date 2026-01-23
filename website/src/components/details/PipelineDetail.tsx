@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { ApiClient } from '@/lib/api';
+import { formatLocalDate } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 
 interface PipelineDetailProps {
@@ -138,7 +139,7 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
                     </span>
                     {item.created_at && (
                       <span className="text-[10px] text-[#3b3b3b]">
-                        {new Date(item.created_at).toLocaleDateString()}
+                        {formatLocalDate(item.created_at)}
                       </span>
                     )}
                   </div>

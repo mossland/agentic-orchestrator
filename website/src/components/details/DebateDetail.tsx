@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiDebate } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { DebateConversation } from '../visualization/DebateConversation';
 import { DebateTimeline } from '../visualization/DebateTimeline';
@@ -186,13 +187,13 @@ export function DebateDetail({ data }: DebateDetailProps) {
           <div>
             <span className="text-[#6b7280]">{t('detail.startedAt')}: </span>
             <span className="text-[#c0c0c0]">
-              {debate.started_at ? new Date(debate.started_at).toLocaleString() : 'N/A'}
+              {formatLocalDateTime(debate.started_at)}
             </span>
           </div>
           <div>
             <span className="text-[#6b7280]">{t('detail.completedAt')}: </span>
             <span className="text-[#c0c0c0]">
-              {debate.completed_at ? new Date(debate.completed_at).toLocaleString() : t('detail.inProgress')}
+              {debate.completed_at ? formatLocalDateTime(debate.completed_at) : t('detail.inProgress')}
             </span>
           </div>
         </div>

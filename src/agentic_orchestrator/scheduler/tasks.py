@@ -59,6 +59,98 @@ def signal_collect():
     asyncio.run(_signal_collect_async())
 
 
+async def _analyze_trends_async():
+    """Async implementation of trend analysis from signals."""
+    import uuid
+    from ..trends import TrendAnalyzer
+    from ..trends.models import FeedItem
+    from ..llm import HybridLLMRouter
+    from ..db import get_database, TrendRepository, SignalRepository
+
+    logger.info("=" * 60)
+    logger.info("Starting trend analysis cycle")
+    logger.info("=" * 60)
+
+    start_time = datetime.utcnow()
+
+    try:
+        # Initialize components
+        router = HybridLLMRouter()
+        analyzer = TrendAnalyzer(router=router)
+        db = get_database()
+        session = db.get_session()
+        signal_repo = SignalRepository(session)
+        trend_repo = TrendRepository(session)
+
+        # Get recent signals (last 48 hours)
+        logger.info("Fetching recent signals...")
+        signals = signal_repo.get_recent(hours=48, limit=200)
+        logger.info(f"Found {len(signals)} signals to analyze")
+
+        if not signals:
+            logger.warning("No signals found for trend analysis")
+            return
+
+        # Convert signals to FeedItem format
+        feed_items = []
+        for s in signals:
+            feed_items.append(FeedItem(
+                title=s.title or "",
+                link=s.url or "",
+                summary=s.summary or "",
+                source=s.source or "unknown",
+                category=s.category or "other",
+                published=s.collected_at or datetime.utcnow(),
+            ))
+
+        logger.info(f"Converted {len(feed_items)} signals to FeedItems")
+
+        # Analyze trends for 24h period (most relevant for current signals)
+        logger.info("Analyzing 24h trends...")
+        analysis = await analyzer.analyze_trends(feed_items, "24h", max_trends=10)
+
+        # Save trends to database
+        saved_count = 0
+        for trend in analysis.trends:
+            try:
+                trend_repo.create({
+                    'id': str(uuid.uuid4())[:8],
+                    'period': trend.time_period,
+                    'name': trend.topic,
+                    'description': trend.summary,
+                    'score': trend.score,
+                    'signal_count': trend.article_count,
+                    'category': trend.category,
+                    'keywords': trend.keywords,
+                    'analysis_data': {
+                        'web3_relevance': trend.web3_relevance,
+                        'idea_seeds': trend.idea_seeds,
+                        'sources': trend.sources,
+                        'sample_headlines': trend.sample_headlines,
+                    },
+                    'analyzed_at': datetime.utcnow(),
+                })
+                saved_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to save trend '{trend.topic}': {e}")
+
+        session.commit()
+        logger.info(f"Saved {saved_count} trends to database")
+
+        duration = (datetime.utcnow() - start_time).total_seconds()
+        logger.info(f"Trend analysis completed in {duration:.1f}s")
+        logger.info(f"Summary: {len(signals)} signals analyzed, {saved_count} trends identified")
+
+    except Exception as e:
+        logger.error(f"Trend analysis failed: {e}", exc_info=True)
+        raise
+
+
+def analyze_trends():
+    """Analyze trends from recent signals."""
+    asyncio.run(_analyze_trends_async())
+
+
 def _generate_debate_topic(signals: list) -> str:
     """Generate a focused debate topic from signal themes.
 
@@ -112,12 +204,266 @@ def _generate_debate_topic(signals: list) -> str:
     return f"[{source}] {title_short} - Mossland 대응 전략"
 
 
+async def _auto_score_and_save_ideas(
+    router,
+    ideas: list,
+    topic: str,
+    context: str,
+    debate_session_id: str,
+    db_session,
+    promote_threshold: float = 7.0,
+    archive_threshold: float = 4.0,
+    max_per_cycle: int = 3,
+):
+    """
+    Auto-score debate ideas and save them to the ideas table.
+
+    Also creates GitHub Issues for tracking.
+
+    Args:
+        router: HybridLLMRouter for scoring
+        ideas: List of ideas from debate result
+        topic: Debate topic (for context)
+        context: Debate context
+        debate_session_id: ID of the debate session
+        db_session: SQLAlchemy session
+        promote_threshold: Score threshold for auto-promotion
+        archive_threshold: Score below which to archive
+        max_per_cycle: Maximum ideas to promote per cycle
+    """
+    import uuid
+    from ..scoring import IdeaScorer
+    from ..db import IdeaRepository, PlanRepository
+
+    logger.info("=" * 40)
+    logger.info("Starting auto-scoring for debate ideas")
+    logger.info("=" * 40)
+
+    scorer = IdeaScorer(
+        router=router,
+        promote_threshold=promote_threshold,
+        archive_threshold=archive_threshold,
+    )
+    idea_repo = IdeaRepository(db_session)
+    plan_repo = PlanRepository(db_session)
+
+    # Initialize GitHub client (optional - won't fail if not configured)
+    github_client = None
+    try:
+        from ..github_client import GitHubClient, Labels
+        github_client = GitHubClient()
+        logger.info("GitHub integration enabled")
+    except Exception as e:
+        logger.warning(f"GitHub integration disabled: {e}")
+
+    promoted_count = 0
+    archived_count = 0
+    pending_count = 0
+
+    for idea in ideas:
+        try:
+            # Build idea content string
+            idea_title = getattr(idea, 'title', str(idea)[:100])
+            idea_content = getattr(idea, 'content', getattr(idea, 'description', str(idea)))
+            idea_summary = idea_content[:500] if idea_content else idea_title
+
+            # Score the idea
+            score_context = f"토론 주제: {topic}\n\n{context[:500]}"
+            score, decision = await scorer.score_and_decide(
+                idea_content=f"제목: {idea_title}\n내용: {idea_content}",
+                context=score_context,
+            )
+
+            # Create idea in database
+            idea_id = str(uuid.uuid4())[:8]
+            status = 'pending'
+
+            if decision == 'promote' and promoted_count < max_per_cycle:
+                status = 'promoted'
+                promoted_count += 1
+                logger.info(f"Auto-promoting: {idea_title[:50]}... (score: {score.total:.1f})")
+            elif decision == 'archive':
+                status = 'archived'
+                archived_count += 1
+                logger.info(f"Archived: {idea_title[:50]}... (score: {score.total:.1f})")
+            else:
+                status = 'scored'
+                pending_count += 1
+                logger.info(f"Scored (pending): {idea_title[:50]}... (score: {score.total:.1f})")
+
+            # Create GitHub Issue for the idea (if GitHub is configured)
+            github_issue_url = None
+            github_issue_id = None
+            if github_client:
+                try:
+                    # Build issue body
+                    issue_body = f"""## Idea Summary
+{idea_summary}
+
+## Auto-Score Results
+- **Total Score**: {score.total:.1f}/10
+- **Feasibility**: {score.feasibility:.1f}/10
+- **Relevance**: {score.relevance:.1f}/10
+- **Novelty**: {score.novelty:.1f}/10
+- **Impact**: {score.impact:.1f}/10
+
+## Decision: {decision.upper()}
+
+## Context
+**Debate Topic**: {topic}
+**Debate Session**: {debate_session_id}
+
+---
+*Auto-generated by MOSS.AO Orchestrator*
+"""
+                    # Determine labels based on status
+                    issue_labels = [Labels.TYPE_IDEA, Labels.GENERATED_BY_ORCHESTRATOR]
+                    if status == 'promoted':
+                        issue_labels.append(Labels.PROMOTE_TO_PLAN)
+                    elif status == 'archived':
+                        issue_labels.append('archived')
+                    else:
+                        issue_labels.append(Labels.STATUS_BACKLOG)
+
+                    issue = github_client.create_issue(
+                        title=f"[Idea] {idea_title[:100]}",
+                        body=issue_body,
+                        labels=issue_labels,
+                    )
+                    github_issue_url = issue.html_url
+                    github_issue_id = issue.number
+                    logger.info(f"Created GitHub Issue #{issue.number} for idea: {idea_title[:50]}...")
+                except Exception as e:
+                    logger.warning(f"Failed to create GitHub Issue for idea: {e}")
+
+            # Save idea to database
+            db_idea = idea_repo.create({
+                'id': idea_id,
+                'title': idea_title[:500],
+                'summary': idea_summary,
+                'description': idea_content,
+                'source_type': 'debate',
+                'status': status,
+                'score': score.total,
+                'github_issue_id': github_issue_id,
+                'github_issue_url': github_issue_url,
+                'extra_metadata': {
+                    'auto_score': score.to_dict(),
+                    'debate_session_id': debate_session_id,
+                    'debate_topic': topic,
+                },
+            })
+
+            # If promoted, create a draft plan
+            if status == 'promoted':
+                plan_github_url = None
+                plan_github_id = None
+
+                # Create GitHub Issue for the plan
+                if github_client:
+                    try:
+                        plan_body = f"""## Plan for: {idea_title}
+
+### Source Idea
+{idea_summary}
+
+### Auto-Promotion Details
+- **Idea Score**: {score.total:.1f}/10
+- **Auto-promoted**: Yes (score >= {promote_threshold})
+
+### Idea Issue
+{f'Related to #{github_issue_id}' if github_issue_id else 'No linked issue'}
+
+---
+*Auto-generated by MOSS.AO Orchestrator*
+"""
+                        plan_labels = [Labels.TYPE_PLAN, Labels.GENERATED_BY_ORCHESTRATOR, Labels.STATUS_BACKLOG]
+                        plan_issue = github_client.create_issue(
+                            title=f"[Plan] {idea_title[:100]}",
+                            body=plan_body,
+                            labels=plan_labels,
+                        )
+                        plan_github_url = plan_issue.html_url
+                        plan_github_id = plan_issue.number
+                        logger.info(f"Created GitHub Issue #{plan_issue.number} for plan")
+                    except Exception as e:
+                        logger.warning(f"Failed to create GitHub Issue for plan: {e}")
+
+                try:
+                    plan_repo.create({
+                        'id': str(uuid.uuid4())[:8],
+                        'idea_id': idea_id,
+                        'debate_session_id': debate_session_id,
+                        'title': f"Plan: {idea_title[:200]}",
+                        'version': 1,
+                        'status': 'draft',
+                        'github_issue_id': plan_github_id,
+                        'github_issue_url': plan_github_url,
+                        'extra_metadata': {
+                            'auto_promoted': True,
+                            'promotion_score': score.total,
+                        },
+                    })
+                    logger.info(f"Created draft plan for promoted idea: {idea_id}")
+                except Exception as e:
+                    logger.warning(f"Failed to create plan for idea {idea_id}: {e}")
+
+        except Exception as e:
+            logger.warning(f"Failed to score/save idea: {e}")
+            continue
+
+    db_session.commit()
+
+    # Cleanup GitHub client
+    if github_client:
+        try:
+            github_client.close()
+        except Exception:
+            pass
+
+    logger.info(f"Auto-scoring complete: {promoted_count} promoted, {archived_count} archived, {pending_count} pending")
+    if github_client:
+        logger.info("GitHub Issues created for all processed ideas")
+
+
+def _generate_debate_topic_from_trend(trend) -> tuple[str, str]:
+    """Generate debate topic and context from a trend.
+
+    Args:
+        trend: Trend object from database
+
+    Returns:
+        Tuple of (topic, context)
+    """
+    # Build topic from trend
+    category = trend.category.upper() if trend.category else "TECH"
+    topic = f"[{category}] {trend.name} - Mossland 전략적 대응 방안"
+
+    # Build context from trend analysis data
+    context_parts = [f"트렌드 요약: {trend.description or trend.name}"]
+
+    analysis_data = trend.analysis_data or {}
+    if analysis_data.get('web3_relevance'):
+        context_parts.append(f"Web3 관련성: {analysis_data['web3_relevance']}")
+    if analysis_data.get('idea_seeds'):
+        seeds = analysis_data['idea_seeds']
+        if isinstance(seeds, list):
+            context_parts.append(f"아이디어 시드: {', '.join(seeds[:5])}")
+
+    keywords = trend.keywords or []
+    if keywords:
+        context_parts.append(f"주요 키워드: {', '.join(keywords[:10])}")
+
+    context = "\n".join(context_parts)
+    return topic, context
+
+
 async def _run_debate_async(topic: Optional[str] = None):
     """Async implementation of debate execution."""
     from ..llm import HybridLLMRouter
     from ..debate import MultiStageDebate, run_multi_stage_debate
     from ..signals import SignalStorage
-    from ..db import get_database, SignalRepository, DebateRepository
+    from ..db import get_database, SignalRepository, DebateRepository, TrendRepository
 
     logger.info("=" * 60)
     logger.info("Starting multi-stage debate cycle")
@@ -126,6 +472,7 @@ async def _run_debate_async(topic: Optional[str] = None):
     start_time = datetime.utcnow()
     debate_session = None
     db = None
+    trend_context = None
 
     try:
         # Initialize components
@@ -133,22 +480,39 @@ async def _run_debate_async(topic: Optional[str] = None):
         session = db.get_session()
         signal_repo = SignalRepository(session)
         debate_repo = DebateRepository(session)
+        trend_repo = TrendRepository(session)
 
-        # Get topic from high-relevance signals if not provided
+        # Get topic from trends first, then fall back to signals
         if not topic:
-            logger.info("Selecting topic from recent high-relevance signals...")
-            signals = signal_repo.get_recent(limit=10, min_score=0.7)
-            if signals:
-                # Generate a focused topic from signal themes
-                topic = _generate_debate_topic(signals[:5])
+            # Try to use recent trends first
+            logger.info("Checking for recent trends...")
+            recent_trends = trend_repo.get_latest(period="24h", limit=5)
+
+            if recent_trends:
+                # Use the top trend
+                top_trend = recent_trends[0]
+                topic, trend_context = _generate_debate_topic_from_trend(top_trend)
+                logger.info(f"Using trend-based topic: {topic}")
             else:
-                topic = "Mossland 생태계의 다음 분기 전략 방향"
+                # Fall back to signal-based topic generation
+                logger.info("No recent trends found, selecting topic from signals...")
+                signals = signal_repo.get_recent(limit=10, min_score=0.7)
+                if signals:
+                    topic = _generate_debate_topic(signals[:5])
+                else:
+                    topic = "Mossland 생태계의 다음 분기 전략 방향"
 
         logger.info(f"Debate topic: {topic}")
 
-        # Get context from recent signals
+        # Build context: use trend context if available, supplement with signals
+        if trend_context:
+            context = trend_context + "\n\n--- 최근 관련 신호 ---\n"
+        else:
+            context = ""
+
+        # Add context from recent signals
         context_signals = signal_repo.get_recent(limit=20)
-        context = "\n".join([
+        context += "\n".join([
             f"- [{s.source}] {s.title}: {s.summary[:200] if s.summary else 'No summary'}"
             for s in context_signals
         ])
@@ -239,6 +603,17 @@ async def _run_debate_async(topic: Optional[str] = None):
             logger.info(f"Saved debate results to database: {session_id}")
         except Exception as e:
             logger.error(f"Failed to save debate results: {e}", exc_info=True)
+
+        # Auto-score and save ideas to ideas table
+        if result.all_ideas:
+            await _auto_score_and_save_ideas(
+                router=router,
+                ideas=result.all_ideas,
+                topic=topic,
+                context=context,
+                debate_session_id=session_id,
+                db_session=session,
+            )
 
         # Log results
         logger.info("Debate results summary:")

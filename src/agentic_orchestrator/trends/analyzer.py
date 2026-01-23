@@ -1,14 +1,15 @@
 """
 Trend analysis using LLM.
 
-Analyzes feed items to identify trending topics using Claude.
+Analyzes feed items to identify trending topics using local LLM (Ollama).
 """
 
 import json
 import re
 from datetime import datetime
+from typing import Optional
 
-from ..providers.claude import ClaudeProvider, create_claude_provider
+from ..llm.router import HybridLLMRouter
 from ..utils.config import Config, load_config
 from ..utils.logging import get_logger
 from .models import FeedItem, Trend, TrendAnalysis
@@ -20,7 +21,7 @@ class TrendAnalyzer:
     """
     Analyzes feed items to identify trending topics.
 
-    Uses Claude to extract and score trends from news articles.
+    Uses local LLM (Ollama) via HybridLLMRouter to extract and score trends.
     """
 
     # Maximum articles to include in a single analysis prompt
@@ -46,7 +47,7 @@ Prioritize trends with:
 
     def __init__(
         self,
-        claude: ClaudeProvider | None = None,
+        router: Optional[HybridLLMRouter] = None,
         config: Config | None = None,
         dry_run: bool = False,
     ):
@@ -54,22 +55,22 @@ Prioritize trends with:
         Initialize trend analyzer.
 
         Args:
-            claude: Claude provider for LLM analysis.
+            router: HybridLLMRouter for LLM analysis (uses local Ollama).
             config: Configuration object.
             dry_run: If True, skip LLM calls and return mock data.
         """
-        self._claude = claude
+        self._router = router
         self.config = config or load_config()
         self.dry_run = dry_run
 
     @property
-    def claude(self) -> ClaudeProvider:
-        """Lazy-loaded Claude provider."""
-        if self._claude is None:
-            self._claude = create_claude_provider(dry_run=self.dry_run)
-        return self._claude
+    def router(self) -> HybridLLMRouter:
+        """Lazy-loaded HybridLLMRouter."""
+        if self._router is None:
+            self._router = HybridLLMRouter()
+        return self._router
 
-    def analyze_trends(
+    async def analyze_trends(
         self,
         items: list[FeedItem],
         period: str,
@@ -105,23 +106,27 @@ Prioritize trends with:
         )
 
         if self.dry_run:
-            logger.info(f"[{period}] [DRY RUN] Skipping Claude API call")
+            logger.info(f"[{period}] [DRY RUN] Skipping LLM call")
             return self._create_mock_analysis(analysis_items, period, sources, categories)
 
         prompt = self._build_analysis_prompt(analysis_items, period, max_trends)
-        logger.info(f"[{period}] Sending prompt to Claude ({len(prompt)} chars)")
+        logger.info(f"[{period}] Sending prompt to local LLM ({len(prompt)} chars)")
 
         try:
-            response = self.claude.chat(
-                user_message=prompt,
-                system_message=self.SYSTEM_MESSAGE,
+            llm_response = await self.router.route(
+                prompt=prompt,
+                system=self.SYSTEM_MESSAGE,
+                task_type="trend_analysis",
+                force_local=True,
+                quality="normal",
             )
+            response = llm_response.content
 
             response_len = len(response) if response else 0
-            logger.info(f"[{period}] Claude response received: {response_len} chars")
+            logger.info(f"[{period}] LLM response received: {response_len} chars (model: {llm_response.model})")
 
             if not response or not response.strip():
-                logger.error(f"[{period}] Empty response from Claude! repr={repr(response)}")
+                logger.error(f"[{period}] Empty response from LLM! repr={repr(response)}")
                 return TrendAnalysis(
                     date=datetime.utcnow(),
                     period=period,
@@ -406,7 +411,7 @@ Focus on actionable insights and Web3 opportunities."""
             categories_analyzed=categories,
         )
 
-    def analyze_all_periods(
+    async def analyze_all_periods(
         self,
         items: list[FeedItem],
     ) -> dict[str, TrendAnalysis]:
@@ -428,7 +433,7 @@ Focus on actionable insights and Web3 opportunities."""
 
         for period in periods:
             filtered_items = fetcher.filter_by_period(items, period)
-            analysis = self.analyze_trends(filtered_items, period)
+            analysis = await self.analyze_trends(filtered_items, period)
             results[period] = analysis
             logger.info(
                 f"Analyzed {period}: {len(analysis.trends)} trends from "

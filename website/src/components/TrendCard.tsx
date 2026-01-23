@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { useModal } from '@/components/modals/useModal';
+import { formatLocalDateTime } from '@/lib/date';
 import type { Trend } from '@/lib/types';
 
 interface TrendCardProps {
@@ -64,7 +65,7 @@ export function TrendCard({ trend, index, trendId }: TrendCardProps) {
               </span>
               {trend.analyzedAt && (
                 <span className="font-mono text-xs text-zinc-600">
-                  • {new Date(trend.analyzedAt).toLocaleDateString()} {new Date(trend.analyzedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  • {formatLocalDateTime(trend.analyzedAt)}
                 </span>
               )}
             </div>

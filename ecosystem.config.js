@@ -37,6 +37,28 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     },
 
+    // Trend Analyzer - Runs every 2 hours
+    // Analyzes signals to identify trends using local LLM (Ollama)
+    {
+      name: 'moss-ao-trends',
+      script: '.venv/bin/python',
+      args: '-m agentic_orchestrator.scheduler analyze-trends',
+      cwd: __dirname,
+      instances: 1,
+      autorestart: false,  // Don't auto-restart, wait for cron
+      watch: false,
+      max_memory_restart: '1G',
+      cron_restart: '0 */2 * * *', // Every 2 hours
+      env: {
+        NODE_ENV: 'production',
+        PYTHONPATH: './src',
+        OLLAMA_HOST: 'http://localhost:11434',
+      },
+      error_file: './logs/trends-error.log',
+      out_file: './logs/trends-out.log',
+      log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    },
+
     // Debate Runner - Runs every 6 hours
     {
       name: 'moss-ao-debate',
@@ -58,7 +80,8 @@ module.exports = {
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     },
 
-    // Backlog Processor - Runs daily at midnight
+    // Backlog Processor - Runs every 4 hours
+    // Processes idea queue, generates status reports
     {
       name: 'moss-ao-backlog',
       script: '.venv/bin/python',
@@ -68,7 +91,7 @@ module.exports = {
       autorestart: false,  // Don't auto-restart, wait for cron
       watch: false,
       max_memory_restart: '1G',
-      cron_restart: '0 0 * * *', // Daily at midnight
+      cron_restart: '0 */4 * * *', // Every 4 hours
       env: {
         NODE_ENV: 'production',
         PYTHONPATH: './src',

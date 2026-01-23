@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiPlan } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { TerminalBadge } from '../TerminalWindow';
 
@@ -165,13 +166,13 @@ export function PlanDetail({ data }: PlanDetailProps) {
           <div>
             <span className="text-[#6b7280]">{t('detail.createdAt')}: </span>
             <span className="text-[#c0c0c0]">
-              {plan.created_at ? new Date(plan.created_at).toLocaleString() : 'N/A'}
+              {formatLocalDateTime(plan.created_at)}
             </span>
           </div>
           <div>
             <span className="text-[#6b7280]">{t('detail.updatedAt')}: </span>
             <span className="text-[#c0c0c0]">
-              {plan.updated_at ? new Date(plan.updated_at).toLocaleString() : 'N/A'}
+              {formatLocalDateTime(plan.updated_at)}
             </span>
           </div>
         </div>

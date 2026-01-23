@@ -50,12 +50,14 @@ class SignalCategory(str, enum.Enum):
 
 
 class IdeaStatus(str, enum.Enum):
-    PENDING = "pending"
-    IN_DEBATE = "in_debate"
-    SELECTED = "selected"
-    REJECTED = "rejected"
-    PLANNED = "planned"
-    ARCHIVED = "archived"
+    PENDING = "pending"      # Awaiting scoring
+    SCORED = "scored"        # Scored but not yet promoted (middle score)
+    PROMOTED = "promoted"    # Auto-promoted to planning (high score)
+    IN_DEBATE = "in_debate"  # Currently being debated
+    SELECTED = "selected"    # Manually selected for planning
+    REJECTED = "rejected"    # Manually rejected
+    PLANNED = "planned"      # Plan created
+    ARCHIVED = "archived"    # Archived (low score or old)
 
 
 class DebatePhase(str, enum.Enum):
@@ -164,6 +166,7 @@ class Trend(Base):
     ideas = relationship("Idea", back_populates="source_trend")
 
     def to_dict(self) -> Dict[str, Any]:
+        analysis = self.analysis_data or {}
         return {
             "id": self.id,
             "period": self.period,
@@ -174,6 +177,11 @@ class Trend(Base):
             "category": self.category,
             "keywords": self.keywords or [],
             "analyzed_at": self.analyzed_at.isoformat() if self.analyzed_at else None,
+            # Rich analysis data
+            "web3_relevance": analysis.get("web3_relevance", ""),
+            "idea_seeds": analysis.get("idea_seeds", []),
+            "sources": analysis.get("sources", []),
+            "sample_headlines": analysis.get("sample_headlines", []),
         }
 
 

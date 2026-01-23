@@ -3,6 +3,7 @@ CLI entry point for scheduler tasks.
 
 Usage:
     python -m agentic_orchestrator.scheduler signal-collect
+    python -m agentic_orchestrator.scheduler analyze-trends
     python -m agentic_orchestrator.scheduler run-debate
     python -m agentic_orchestrator.scheduler process-backlog
     python -m agentic_orchestrator.scheduler health-check
@@ -10,7 +11,7 @@ Usage:
 
 import sys
 import argparse
-from .tasks import signal_collect, run_debate, process_backlog, health_check
+from .tasks import signal_collect, analyze_trends, run_debate, process_backlog, health_check
 
 
 def main():
@@ -25,6 +26,12 @@ def main():
     subparsers.add_parser(
         'signal-collect',
         help='Collect signals from all adapters',
+    )
+
+    # analyze-trends command
+    subparsers.add_parser(
+        'analyze-trends',
+        help='Analyze trends from recent signals using local LLM',
     )
 
     # run-debate command
@@ -55,6 +62,8 @@ def main():
 
     if args.command == 'signal-collect':
         signal_collect()
+    elif args.command == 'analyze-trends':
+        analyze_trends()
     elif args.command == 'run-debate':
         run_debate(topic=args.topic if hasattr(args, 'topic') else None)
     elif args.command == 'process-backlog':

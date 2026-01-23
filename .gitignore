@@ -66,3 +66,7 @@ out/
 
 # Agent state
 .agent/
+
+# Local documentation with sensitive info
+*.local.md
+CLAUDE.local.md

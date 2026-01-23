@@ -53,29 +53,40 @@ throttling:
   # Global settings
   enabled: true
 
-  # Local LLM (Ollama) specific - Aggressive throttling for cooling
+  # Local LLM (Ollama) specific - Very aggressive throttling for cooling
   ollama:
-    # Minimum seconds between requests
-    min_request_interval: 5
+    # Minimum seconds between requests (increased for better cooling)
+    min_request_interval: 15
     # Maximum concurrent requests (1 = sequential only)
     max_concurrent_requests: 1
-    # Cooling period after N requests (seconds)
-    cooling_period_seconds: 30
-    # Number of requests before cooling
-    requests_before_cooling: 5
+    # Cooling period after N requests (seconds) - longer cooling
+    cooling_period_seconds: 120
+    # Number of requests before cooling (reduced)
+    requests_before_cooling: 3
     # Request timeout (seconds)
-    request_timeout: 120
+    request_timeout: 180
     # Batch delay between multiple generations
-    batch_delay_seconds: 10
+    batch_delay_seconds: 30
 
-  # Cloud API throttling (lighter limits)
+  # Cloud API throttling (cost-conscious limits)
   cloud:
-    # Minimum seconds between requests
-    min_request_interval: 1
-    # Maximum concurrent requests
-    max_concurrent_requests: 3
+    # Minimum seconds between requests (increased to reduce costs)
+    min_request_interval: 3
+    # Maximum concurrent requests (reduced)
+    max_concurrent_requests: 2
     # Request timeout (seconds)
     request_timeout: 60
+
+# API Budget Configuration
+budget:
+  # Daily spending limit in USD
+  daily_limit_usd: 5.0
+  # Monthly spending limit in USD
+  monthly_limit_usd: 150.0
+  # Warn when usage reaches this percentage
+  warning_threshold: 0.7
+  # Critical alert at this percentage (prefer local models)
+  critical_threshold: 0.9
 
 # Quality Thresholds
 quality:

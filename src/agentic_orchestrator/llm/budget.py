@@ -16,10 +16,10 @@ from ..db.repositories import APIUsageRepository
 @dataclass
 class UsageBudget:
     """Budget configuration."""
-    daily_limit_usd: float = 50.0
-    monthly_limit_usd: float = 1500.0
-    warning_threshold: float = 0.8  # Warn at 80%
-    critical_threshold: float = 0.95  # Critical at 95%
+    daily_limit_usd: float = 5.0  # Conservative daily limit
+    monthly_limit_usd: float = 150.0  # ~$5/day * 30 days
+    warning_threshold: float = 0.7  # Warn at 70%
+    critical_threshold: float = 0.9  # Critical at 90%
 
 
 @dataclass
@@ -66,8 +66,8 @@ class BudgetController:
         storage_path: Optional[Path] = None,
     ):
         self.budget = budget or UsageBudget(
-            daily_limit_usd=float(os.getenv("DAILY_BUDGET_USD", "50.0")),
-            monthly_limit_usd=float(os.getenv("MONTHLY_BUDGET_USD", "1500.0")),
+            daily_limit_usd=float(os.getenv("DAILY_BUDGET_USD", "5.0")),
+            monthly_limit_usd=float(os.getenv("MONTHLY_BUDGET_USD", "150.0")),
         )
         self.storage_path = storage_path or Path("data/usage")
         self.storage_path.mkdir(parents=True, exist_ok=True)

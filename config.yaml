@@ -53,7 +53,7 @@ throttling:
   # Global settings
   enabled: true
   # Test mode: Less aggressive throttling for faster testing
-  test_mode: true
+  test_mode: false
 
   # Local LLM (Ollama) specific - Production settings
   ollama:
@@ -93,7 +93,7 @@ budget:
 # Debate Configuration
 debate:
   # Test mode: Reduced agents for faster testing
-  test_mode: true
+  test_mode: false
 
   # Normal mode settings (when test_mode: false)
   normal:

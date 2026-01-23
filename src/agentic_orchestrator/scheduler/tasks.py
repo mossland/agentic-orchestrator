@@ -152,56 +152,97 @@ def analyze_trends():
 
 
 def _generate_debate_topic(signals: list) -> str:
-    """Generate a focused debate topic from signal themes.
+    """Generate a focused, descriptive debate topic from signal themes.
 
-    Analyzes signal titles and sources to create a specific, readable topic.
+    Analyzes signal titles and sources to create a specific, actionable topic.
     """
     if not signals:
-        return "Mossland 생태계의 다음 분기 전략 방향"
+        return "Mossland 생태계 확장을 위한 AI 에이전트 및 DeFi 통합 전략 수립"
 
-    # Category keywords for topic generation
+    # Category keywords for topic generation with action verbs
     category_themes = {
-        'defi': ('DeFi', ['tvl', 'yield', 'liquidity', 'swap', 'lending', 'aave', 'uniswap', 'compound', 'curve']),
-        'nft': ('NFT/메타버스', ['nft', 'metaverse', 'opensea', 'blur', 'collection', 'mint']),
-        'market': ('시장 동향', ['price', 'bitcoin', 'btc', 'eth', 'market', 'trading', 'volume']),
-        'regulation': ('규제/정책', ['regulation', 'sec', 'law', 'policy', 'government', 'ban']),
-        'gaming': ('게임/P2E', ['game', 'gaming', 'play', 'p2e', 'earn']),
-        'ai': ('AI/기술', ['ai', 'artificial', 'machine', 'learning', 'gpt', 'llm']),
-        'dao': ('DAO/거버넌스', ['dao', 'governance', 'vote', 'proposal', 'treasury']),
+        'defi': {
+            'name': 'DeFi',
+            'keywords': ['tvl', 'yield', 'liquidity', 'swap', 'lending', 'aave', 'uniswap', 'compound', 'curve', 'staking', 'protocol'],
+            'actions': ['수익률 최적화', '유동성 공급', '프로토콜 통합', '리스크 관리']
+        },
+        'nft': {
+            'name': 'NFT/메타버스',
+            'keywords': ['nft', 'metaverse', 'opensea', 'blur', 'collection', 'mint', 'digital asset', 'virtual'],
+            'actions': ['자산 가치화', 'NFT 유틸리티 확장', '메타버스 연동', '크리에이터 경제']
+        },
+        'market': {
+            'name': '시장 분석',
+            'keywords': ['price', 'bitcoin', 'btc', 'eth', 'market', 'trading', 'volume', 'bull', 'bear'],
+            'actions': ['투자 전략', '시장 대응', '포트폴리오 최적화', '리스크 헤지']
+        },
+        'regulation': {
+            'name': '규제/컴플라이언스',
+            'keywords': ['regulation', 'sec', 'law', 'policy', 'government', 'ban', 'legal', 'compliance'],
+            'actions': ['규제 대응', '컴플라이언스 강화', '리스크 완화', '투명성 확보']
+        },
+        'gaming': {
+            'name': '게임/GameFi',
+            'keywords': ['game', 'gaming', 'play', 'p2e', 'earn', 'esports', 'player'],
+            'actions': ['P2E 모델 혁신', '게임 이코노미 설계', '사용자 경험 개선', '커뮤니티 성장']
+        },
+        'ai': {
+            'name': 'AI/자동화',
+            'keywords': ['ai', 'artificial', 'machine', 'learning', 'gpt', 'llm', 'agent', 'automation', 'model'],
+            'actions': ['AI 에이전트 개발', '자동화 시스템 구축', '지능형 서비스', '데이터 분석']
+        },
+        'dao': {
+            'name': 'DAO/거버넌스',
+            'keywords': ['dao', 'governance', 'vote', 'proposal', 'treasury', 'community', 'decentralized'],
+            'actions': ['거버넌스 개선', '커뮤니티 참여 확대', '의사결정 최적화', '투명성 강화']
+        },
+        'security': {
+            'name': '보안',
+            'keywords': ['security', 'hack', 'exploit', 'audit', 'vulnerability', 'protection'],
+            'actions': ['보안 강화', '스마트 컨트랙트 감사', '위협 탐지', '자산 보호']
+        },
     }
 
     # Collect all text for analysis
     all_text = ' '.join([s.title.lower() for s in signals if s.title])
 
-    # Find dominant theme
+    # Find dominant theme with scoring
     theme_scores = {}
-    for theme_key, (theme_name, keywords) in category_themes.items():
-        score = sum(1 for kw in keywords if kw in all_text)
+    for theme_key, theme_data in category_themes.items():
+        score = sum(1 for kw in theme_data['keywords'] if kw in all_text)
         if score > 0:
-            theme_scores[theme_key] = (theme_name, score)
+            theme_scores[theme_key] = (theme_data, score)
 
     # Get top theme
     if theme_scores:
-        top_theme = max(theme_scores.items(), key=lambda x: x[1][1])
-        theme_name = top_theme[1][0]
+        top_theme_key, (theme_data, _) = max(theme_scores.items(), key=lambda x: x[1][1])
+        theme_name = theme_data['name']
+        action = theme_data['actions'][0]  # Primary action
 
         # Extract key entity from highest scored signal
         top_signal = signals[0]
-        # Extract first meaningful phrase (before ':' or '-')
-        title_parts = top_signal.title.replace(':', ' - ').split(' - ')
-        key_entity = title_parts[0].strip()[:50] if title_parts else ''
 
-        if key_entity:
-            return f"[{theme_name}] {key_entity} - Mossland 전략적 대응 방안"
+        # Extract meaningful phrases
+        title = top_signal.title or ""
+        # Remove common prefixes and get core content
+        title_clean = title.replace(':', ' - ').replace('|', ' - ')
+        title_parts = [p.strip() for p in title_clean.split(' - ') if len(p.strip()) > 5]
+
+        if title_parts:
+            # Use the most informative part
+            key_entity = max(title_parts[:2], key=len)[:60] if title_parts else ''
+
+            # Generate descriptive topic
+            return f"[{theme_name}] {key_entity}에 대한 Mossland의 {action} 전략 및 구체적 실행 방안"
         else:
-            return f"[{theme_name}] 최근 동향 분석과 Mossland 전략"
+            return f"[{theme_name}] 최신 트렌드 기반 Mossland {action} 전략 - MVP 개발 방향 논의"
 
-    # Fallback: use top signal's source and title
+    # Fallback: use top signal's source and create actionable topic
     top_signal = signals[0]
-    source = top_signal.source.upper() if hasattr(top_signal, 'source') and top_signal.source else 'MARKET'
-    title_short = top_signal.title[:40] if top_signal.title else '시장 동향'
+    source = getattr(top_signal, 'source', 'MARKET').upper() if hasattr(top_signal, 'source') else 'MARKET'
+    title_short = (top_signal.title or '시장 동향')[:50]
 
-    return f"[{source}] {title_short} - Mossland 대응 전략"
+    return f"[{source}] {title_short} - Mossland 생태계 연동 및 신규 서비스 개발 방안"
 
 
 async def _auto_score_and_save_ideas(

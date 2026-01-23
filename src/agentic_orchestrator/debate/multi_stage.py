@@ -770,28 +770,73 @@ class MultiStageDebate:
         round_num: int,
     ) -> Optional[Idea]:
         """Extract idea from agent response."""
+        import re
         lines = content.strip().split("\n")
 
-        # Try to find title (look for headers or first meaningful line)
         title = None
-        for line in lines:
-            line = line.strip()
-            if line.startswith("#"):
-                title = line.lstrip("#").strip()
-                break
-            if line.startswith("**") and line.endswith("**"):
-                title = line.strip("*").strip()
-                break
-            if len(line) > 10 and len(line) < 100:
-                title = line
-                break
 
+        # Priority 1: Look for "## 아이디어: [제목]" format
+        idea_pattern = r"##\s*아이디어[:\s]+(.+)"
+        match = re.search(idea_pattern, content)
+        if match:
+            title = match.group(1).strip()
+
+        # Priority 2: Look for "프로젝트 명:" or "프로젝트명:" format
         if not title:
-            title = f"{agent.name}의 제안"
+            project_pattern = r"프로젝트\s*명[:\s]+(.+)"
+            match = re.search(project_pattern, content)
+            if match:
+                title = match.group(1).strip()
+
+        # Priority 3: Try to find title from headers or bold text
+        if not title:
+            for line in lines:
+                line = line.strip()
+                # Skip generic headers
+                if any(skip in line.lower() for skip in ['핵심 분석', '기회', '리스크', '제안', '우선순위', '실행', '개요', '목표']):
+                    continue
+                if line.startswith("##") and "아이디어" not in line:
+                    potential = line.lstrip("#").strip()
+                    if len(potential) > 20:  # Require substantial title
+                        title = potential
+                        break
+                if line.startswith("**") and line.endswith("**"):
+                    potential = line.strip("*").strip()
+                    if len(potential) > 20:
+                        title = potential
+                        break
+
+        # Priority 4: Use first substantial line
+        if not title:
+            for line in lines:
+                line = line.strip()
+                if line.startswith("#") or line.startswith("*"):
+                    continue
+                if len(line) > 30 and len(line) < 150 and not line.startswith("-"):
+                    title = line
+                    break
+
+        # Fallback: Generate descriptive title from content
+        if not title or len(title) < 20:
+            # Extract keywords from content
+            keywords = []
+            keyword_patterns = [
+                r'(AI|DeFi|NFT|DAO|Web3|블록체인|메타버스|에이전트)',
+                r'(자동화|분석|트래킹|모니터링|대시보드)',
+                r'(Mossland|모스랜드)',
+            ]
+            for pattern in keyword_patterns:
+                matches = re.findall(pattern, content[:500])
+                keywords.extend(matches[:2])
+
+            if keywords:
+                title = f"{agent.name}의 {' '.join(keywords[:3])} 관련 아이디어 제안"
+            else:
+                title = f"{agent.name}의 Mossland 생태계 혁신 아이디어 제안"
 
         return Idea(
             id=f"idea-{self.session_id}-{round_num}-{agent.id}",
-            title=title[:100],
+            title=title[:150],  # Allow longer titles
             content=content,
             agent_id=agent.id,
             agent_name=agent.name,

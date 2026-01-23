@@ -219,33 +219,43 @@ Prioritize trends with:
 
 ## Instructions
 Identify the most significant trends from these headlines. For each trend:
-1. Provide a concise topic name (3-5 words)
-2. List relevant keywords
-3. Explain why it's trending
-4. Assess its relevance to Web3/blockchain
-5. Suggest potential project ideas
+
+### 제목 요구사항 (IMPORTANT)
+- **구체적이고 설명적인 제목을 작성하세요 (최소 30자 이상)**
+- 일반적인 표현 대신 구체적인 기술명, 프로젝트명, 수치를 포함하세요
+- 나쁜 예: "AI 트렌드", "DeFi 성장", "NFT 뉴스"
+- 좋은 예: "OpenAI의 GPT-5 출시로 에이전트 자동화 혁신 가속화", "Uniswap v4 훅스 도입으로 맞춤형 DEX 전략 가능"
+
+### 내용 요구사항
+- summary는 최소 200자 이상으로 트렌드의 배경, 현황, 영향을 상세히 설명
+- web3_relevance는 구체적인 적용 시나리오와 예상 효과를 포함
+- idea_seeds는 각각 구현 가능한 프로젝트 아이디어로 상세하게 기술
 
 Respond with a JSON object in this exact format:
 ```json
 {{
   "trends": [
     {{
-      "topic": "AI Agent Frameworks Surge",
-      "keywords": ["agents", "autonomous", "LLM", "orchestration"],
-      "summary": "Multiple major announcements of AI agent frameworks...",
+      "topic": "OpenAI GPT-5 에이전트 SDK 출시로 자율 AI 워크플로우 자동화 시대 개막",
+      "keywords": ["GPT-5", "AI Agent", "autonomous workflow", "LLM orchestration", "tool use"],
+      "summary": "OpenAI가 GPT-5와 함께 Agent SDK를 정식 출시하면서 AI 에이전트 개발이 본격화되고 있다. 이번 SDK는 도구 사용, 메모리 관리, 멀티스텝 추론을 네이티브로 지원하며, 기업들은 이를 활용해 복잡한 비즈니스 프로세스를 자동화하기 시작했다. 특히 금융, 의료, 법률 분야에서 에이전트 도입이 가속화되고 있으며, 개발자 커뮤니티에서는 다양한 오픈소스 프레임워크가 등장하고 있다.",
       "category": "ai",
-      "score": 8.5,
-      "article_count": 12,
-      "sources": ["TechCrunch", "Hacker News"],
-      "sample_headlines": ["OpenAI Releases Agent SDK", "LangChain 2.0 Announced"],
-      "web3_relevance": "AI agents can automate DeFi operations, DAO governance...",
-      "idea_seeds": ["On-chain AI agent marketplace", "Autonomous trading bots"]
+      "score": 9.2,
+      "article_count": 15,
+      "sources": ["TechCrunch", "Hacker News", "OpenAI Blog"],
+      "sample_headlines": ["OpenAI Releases Agent SDK with Native Tool Use", "GPT-5 Powers New Wave of Autonomous Business Agents"],
+      "web3_relevance": "AI 에이전트는 DeFi 프로토콜의 자동 리밸런싱, DAO 제안서 분석 및 투표 자동화, 스마트 컨트랙트 보안 감사 자동화 등에 활용될 수 있다. 특히 온체인 데이터 분석과 결합하면 실시간 시장 대응 전략 구현이 가능하다.",
+      "idea_seeds": [
+        "DeFi 포트폴리오 자동 리밸런싱 에이전트 - 사용자의 리스크 성향에 맞춰 자동으로 포지션 조정",
+        "DAO 거버넌스 참여 에이전트 - 토큰 홀더를 대신해 제안서 분석 및 투표",
+        "스마트 컨트랙트 보안 감사 자동화 도구 - AI가 취약점 탐지 및 리포트 생성"
+      ]
     }}
   ]
 }}
 ```
 
-Focus on actionable insights and Web3 opportunities."""
+Focus on actionable insights and Web3 opportunities. Be specific and detailed."""
 
     def _parse_trends_response(
         self,

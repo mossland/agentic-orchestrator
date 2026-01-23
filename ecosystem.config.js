@@ -29,7 +29,7 @@
  */
 
 // Toggle between TEST and PRODUCTION schedules
-const TEST_MODE = true;  // Set to false for production schedules
+const TEST_MODE = false;  // Set to false for production schedules
 
 const SCHEDULES = {
   test: {

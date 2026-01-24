@@ -626,3 +626,97 @@ body::before {
 .score-gauge-glow {
   box-shadow: 0 0 10px currentColor;
 }
+
+/* Markdown content styles */
+.markdown-content {
+  font-size: inherit;
+  line-height: 1.6;
+  color: inherit;
+}
+
+.markdown-content p {
+  margin: 0 0 0.5em 0;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content strong {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.markdown-content em {
+  color: var(--accent-purple);
+  font-style: italic;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 0.5em 0;
+  padding-left: 1.5em;
+}
+
+.markdown-content li {
+  margin: 0.25em 0;
+}
+
+.markdown-content code {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9em;
+  color: var(--accent-yellow);
+}
+
+.markdown-content pre {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--terminal-border);
+  border-radius: 4px;
+  padding: 0.75em;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  color: var(--accent-green);
+  margin: 0.75em 0 0.5em 0;
+  font-weight: 700;
+}
+
+.markdown-content h1 { font-size: 1.4em; }
+.markdown-content h2 { font-size: 1.2em; }
+.markdown-content h3 { font-size: 1.1em; }
+.markdown-content h4 { font-size: 1em; }
+
+.markdown-content a {
+  color: var(--accent-cyan);
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: var(--accent-green);
+}
+
+.markdown-content blockquote {
+  border-left: 2px solid var(--accent-purple);
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: var(--muted);
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--terminal-border);
+  margin: 1em 0;
+}

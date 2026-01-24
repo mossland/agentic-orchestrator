@@ -35,6 +35,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AdapterDetailModal**: Fixed empty modal on first open - now auto-selects first adapter
 - **Trend Analysis**: Changed LLM prompt to generate English-only content (Korean via translation)
 - **Pipeline Modal**: Fixed VIEW ALL button for signals and trends stages
+- **Date Locale Display**: Fixed dates showing Korean format in EN locale
+  - Updated `date.ts` with `toBrowserLocale()` helper (en→en-US, ko→ko-KR)
+  - Default locale changed from 'ko-KR' to 'en'
+  - All date formatting functions now respect user locale
+- **Debate JSON Content**: Fixed raw JSON displaying in debate modals
+  - Added `extractReadableContent()` helper to parse JSON and extract readable fields
+  - Applied to LiveDebateViewer, DebateConversation, DebateTimeline components
+- **Markdown Rendering**: Added markdown support in debate messages
+  - Created `MarkdownContent` component using `marked` library
+  - `**bold**` renders as cyan text, `*italic*` as purple
+  - Styled lists, code blocks, headers, blockquotes
 
 ### Technical
 - Added `ContentTranslator` class with `ensure_bilingual()`, `translate_to_english()`, `translate_to_korean()` methods

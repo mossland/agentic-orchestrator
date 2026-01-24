@@ -35,6 +35,17 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 - **AdapterDetailModal**: 첫 오픈 시 빈 모달 수정 - 첫 번째 어댑터 자동 선택
 - **트렌드 분석**: LLM 프롬프트를 영어 전용으로 변경 (한글은 번역으로 제공)
 - **파이프라인 모달**: signals 및 trends 스테이지의 VIEW ALL 버튼 수정
+- **날짜 로케일 표시**: EN 로케일에서 한국어 날짜 표시 문제 수정
+  - `date.ts`에 `toBrowserLocale()` 헬퍼 추가 (en→en-US, ko→ko-KR)
+  - 기본 로케일을 'ko-KR'에서 'en'으로 변경
+  - 모든 날짜 포맷 함수가 사용자 로케일 준수
+- **토론 JSON 콘텐츠**: 토론 모달에서 원시 JSON 표시 문제 수정
+  - JSON 파싱 및 읽기 쉬운 필드 추출을 위한 `extractReadableContent()` 헬퍼 추가
+  - LiveDebateViewer, DebateConversation, DebateTimeline 컴포넌트에 적용
+- **마크다운 렌더링**: 토론 메시지에 마크다운 지원 추가
+  - `marked` 라이브러리를 사용한 `MarkdownContent` 컴포넌트 생성
+  - `**bold**`는 시안 색상, `*italic*`은 보라 색상으로 렌더링
+  - 리스트, 코드 블록, 헤더, 인용문 스타일 적용
 
 ### 기술 사항
 - `ContentTranslator` 클래스 추가: `ensure_bilingual()`, `translate_to_english()`, `translate_to_korean()` 메서드

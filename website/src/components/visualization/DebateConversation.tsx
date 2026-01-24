@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { formatLocalDateTime } from '@/lib/date';
+import { MarkdownContent } from '@/lib/markdown';
 
 // Helper function to extract readable text from JSON content
 function extractReadableContent(content: string): string {
@@ -132,8 +133,8 @@ export function DebateConversation({ messages, locale }: DebateConversationProps
             </div>
 
             {/* Content */}
-            <div className="text-sm text-[#c0c0c0] leading-relaxed whitespace-pre-wrap">
-              {content}
+            <div className="text-sm text-[#c0c0c0] leading-relaxed">
+              <MarkdownContent content={content} />
             </div>
 
             {/* Timestamp */}

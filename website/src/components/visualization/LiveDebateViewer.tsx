@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
+import { MarkdownContent } from '@/lib/markdown';
 import type { ApiDebate, ApiDebateMessage } from '@/lib/api';
 
 // Helper function to extract readable text from JSON content
@@ -256,16 +257,18 @@ export function LiveDebateViewer({
                   </div>
 
                   {/* Message Content */}
-                  <div className="text-sm text-[#c0c0c0] leading-relaxed whitespace-pre-wrap">
+                  <div className="text-sm text-[#c0c0c0] leading-relaxed">
                     {content.length > 500 ? (
                       <details>
                         <summary className="cursor-pointer text-[#00ffff]">
-                          {content.slice(0, 200)}...
+                          <MarkdownContent content={content.slice(0, 200) + '...'} />
                         </summary>
-                        <div className="mt-2">{content}</div>
+                        <div className="mt-2">
+                          <MarkdownContent content={content} />
+                        </div>
                       </details>
                     ) : (
-                      content
+                      <MarkdownContent content={content} />
                     )}
                   </div>
                 </div>

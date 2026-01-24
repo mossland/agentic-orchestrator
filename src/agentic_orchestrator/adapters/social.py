@@ -26,6 +26,12 @@ class SocialMediaAdapter(BaseAdapter):
     Fetches signals from Reddit, Twitter (via Nitter), and Farcaster.
     """
 
+    # Minimum engagement thresholds for quality filtering
+    MIN_ENGAGEMENT = {
+        'reddit': {'score': 10, 'num_comments': 3},
+        'twitter': {'likes': 5, 'retweets': 2},  # Note: Nitter doesn't provide these
+    }
+
     # Subreddits to monitor
     SUBREDDITS: List[str] = [
         "ethereum",
@@ -175,6 +181,20 @@ class SocialMediaAdapter(BaseAdapter):
                         for post in data.get("data", {}).get("children", []):
                             post_data = post.get("data", {})
 
+                            # Build raw_data first for engagement check
+                            raw_data = {
+                                "type": "reddit",
+                                "subreddit": subreddit,
+                                "score": post_data.get("score", 0),
+                                "num_comments": post_data.get("num_comments", 0),
+                                "author": post_data.get("author"),
+                                "created_utc": post_data.get("created_utc"),
+                            }
+
+                            # Skip low-engagement posts
+                            if not self._meets_engagement_threshold(raw_data, "reddit"):
+                                continue
+
                             # Determine category
                             category = self._categorize_subreddit(subreddit)
 
@@ -184,14 +204,7 @@ class SocialMediaAdapter(BaseAdapter):
                                 title=f"r/{subreddit}: {post_data.get('title', '')[:200]}",
                                 summary=post_data.get("selftext", "")[:500] if post_data.get("selftext") else None,
                                 url=f"https://reddit.com{post_data.get('permalink', '')}",
-                                raw_data={
-                                    "type": "reddit",
-                                    "subreddit": subreddit,
-                                    "score": post_data.get("score", 0),
-                                    "num_comments": post_data.get("num_comments", 0),
-                                    "author": post_data.get("author"),
-                                    "created_utc": post_data.get("created_utc"),
-                                },
+                                raw_data=raw_data,
                                 metadata={"platform": "reddit", "subreddit": subreddit}
                             )
                             signals.append(signal)
@@ -286,6 +299,32 @@ class SocialMediaAdapter(BaseAdapter):
                 await asyncio.sleep(1)
 
         return signals
+
+    def _meets_engagement_threshold(
+        self,
+        raw_data: Dict[str, Any],
+        platform: str,
+    ) -> bool:
+        """
+        Check if signal meets minimum engagement threshold.
+
+        Args:
+            raw_data: Raw data from the platform
+            platform: Platform name ('reddit', 'twitter')
+
+        Returns:
+            True if meets threshold
+        """
+        thresholds = self.MIN_ENGAGEMENT.get(platform, {})
+        if not thresholds:
+            return True
+
+        for metric, min_value in thresholds.items():
+            actual_value = raw_data.get(metric, 0) or 0
+            if actual_value < min_value:
+                return False
+
+        return True
 
     def _categorize_subreddit(self, subreddit: str) -> str:
         """Categorize based on subreddit name."""

@@ -29,6 +29,13 @@ class FarcasterAdapter(BaseAdapter):
     - Cast search
     """
 
+    # Minimum engagement thresholds for quality filtering
+    MIN_ENGAGEMENT = {
+        'likes': 3,
+        'recasts': 1,
+        'replies': 0,
+    }
+
     # Neynar API endpoint
     NEYNAR_API = "https://api.neynar.com/v2/farcaster"
 
@@ -237,6 +244,31 @@ class FarcasterAdapter(BaseAdapter):
 
         return signals
 
+    def _meets_engagement_threshold(
+        self,
+        likes: int,
+        recasts: int,
+        replies: int,
+    ) -> bool:
+        """
+        Check if cast meets minimum engagement threshold.
+
+        Returns:
+            True if meets threshold (at least one metric above minimum)
+        """
+        # For Farcaster, require at least one metric to meet threshold
+        # This is more lenient than requiring all metrics
+        if likes >= self.MIN_ENGAGEMENT['likes']:
+            return True
+        if recasts >= self.MIN_ENGAGEMENT['recasts']:
+            return True
+        if replies >= self.MIN_ENGAGEMENT.get('replies', 0):
+            return True
+
+        # If none meet threshold, check combined engagement
+        total_engagement = likes + (recasts * 2) + (replies * 3)
+        return total_engagement >= 5  # Minimum combined score
+
     def _cast_to_signal(
         self,
         cast: Dict[str, Any],
@@ -259,6 +291,13 @@ class FarcasterAdapter(BaseAdapter):
         likes = reactions.get("likes_count", 0)
         recasts = reactions.get("recasts_count", 0)
         replies = cast.get("replies", {}).get("count", 0)
+
+        # Skip low-engagement casts (except for tracked users)
+        if source_type.startswith("user:"):
+            # More lenient for tracked users
+            pass
+        elif not self._meets_engagement_threshold(likes, recasts, replies):
+            return None
 
         engagement = likes + (recasts * 2) + (replies * 3)
 

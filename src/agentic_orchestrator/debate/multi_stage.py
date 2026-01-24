@@ -23,6 +23,12 @@ from ..personas import (
     get_planning_agents,
     get_agent_by_id,
 )
+from ..personas.personalities import (
+    ThinkingStyle,
+    DecisionStyle,
+    CommunicationStyle,
+    ActionStyle,
+)
 from .protocol import (
     DebatePhase,
     DebateProtocol,
@@ -518,14 +524,246 @@ class MultiStageDebate:
         agents: List[AgentPersona],
         count: int,
     ) -> List[AgentPersona]:
-        """Select agents for a round, ensuring diversity."""
+        """Select agents for a round, ensuring personality diversity."""
         if len(agents) <= count:
             return agents
 
-        # Shuffle and select
+        # Use diversity-aware selection
+        selected = self._select_agents_with_diversity(agents, count)
+
+        # Ensure at least one challenger is present
+        selected = self._ensure_challenger_presence(selected, agents)
+
+        return selected
+
+    def _select_agents_with_diversity(
+        self,
+        agents: List[AgentPersona],
+        count: int,
+    ) -> List[AgentPersona]:
+        """
+        Select agents while maintaining personality axis balance.
+
+        Balances across 4 personality axes:
+        - Thinking: optimistic vs cautious
+        - Decision: intuitive vs analytical
+        - Communication: challenger vs supporter
+        - Action: innovative vs pragmatic
+        """
+        selected: List[AgentPersona] = []
+
+        # Track counts for each axis value
+        personality_counts = {
+            'thinking': {'optimistic': 0, 'cautious': 0},
+            'decision': {'intuitive': 0, 'analytical': 0},
+            'communication': {'challenger': 0, 'supporter': 0},
+            'action': {'innovative': 0, 'pragmatic': 0},
+        }
+
+        # Shuffle agents for randomness
         shuffled = agents.copy()
         random.shuffle(shuffled)
-        return shuffled[:count]
+
+        for agent in shuffled:
+            if len(selected) >= count:
+                break
+
+            # Check if adding this agent maintains diversity
+            if self._maintains_diversity(agent, personality_counts, len(selected)):
+                selected.append(agent)
+                self._update_personality_counts(agent, personality_counts)
+
+        # If we couldn't fill with diversity constraints, add remaining randomly
+        if len(selected) < count:
+            remaining = [a for a in shuffled if a not in selected]
+            for agent in remaining:
+                if len(selected) >= count:
+                    break
+                selected.append(agent)
+                self._update_personality_counts(agent, personality_counts)
+
+        # Log diversity distribution
+        logger.info(f"Selected agents personality distribution: {personality_counts}")
+
+        return selected
+
+    def _maintains_diversity(
+        self,
+        agent: AgentPersona,
+        counts: dict,
+        current_count: int,
+    ) -> bool:
+        """
+        Check if adding this agent maintains reasonable diversity.
+
+        Allows imbalance up to 2 agents difference per axis.
+        """
+        if current_count == 0:
+            return True
+
+        max_imbalance = 2  # Allow up to 2 agents difference
+
+        personality = agent.personality
+
+        # Check each axis
+        thinking_val = personality.thinking.value
+        decision_val = personality.decision.value
+        communication_val = personality.communication.value
+        action_val = personality.action.value
+
+        # Get opposite values for each axis
+        thinking_opposite = 'cautious' if thinking_val == 'optimistic' else 'optimistic'
+        decision_opposite = 'analytical' if decision_val == 'intuitive' else 'intuitive'
+        communication_opposite = 'supporter' if communication_val == 'challenger' else 'challenger'
+        action_opposite = 'pragmatic' if action_val == 'innovative' else 'innovative'
+
+        # Check if adding this agent would create too much imbalance
+        if counts['thinking'][thinking_val] - counts['thinking'][thinking_opposite] >= max_imbalance:
+            return False
+        if counts['decision'][decision_val] - counts['decision'][decision_opposite] >= max_imbalance:
+            return False
+        if counts['communication'][communication_val] - counts['communication'][communication_opposite] >= max_imbalance:
+            return False
+        if counts['action'][action_val] - counts['action'][action_opposite] >= max_imbalance:
+            return False
+
+        return True
+
+    def _update_personality_counts(
+        self,
+        agent: AgentPersona,
+        counts: dict,
+    ) -> None:
+        """Update personality axis counts for the agent."""
+        personality = agent.personality
+
+        counts['thinking'][personality.thinking.value] += 1
+        counts['decision'][personality.decision.value] += 1
+        counts['communication'][personality.communication.value] += 1
+        counts['action'][personality.action.value] += 1
+
+    def _ensure_challenger_presence(
+        self,
+        selected: List[AgentPersona],
+        all_agents: List[AgentPersona],
+    ) -> List[AgentPersona]:
+        """
+        Ensure at least one challenger-type agent is present.
+
+        Challenger types are agents with CommunicationStyle.CHALLENGER
+        who can provide critical feedback and challenging questions.
+        """
+        # Check if any selected agent is a challenger
+        has_challenger = any(
+            agent.personality.communication == CommunicationStyle.CHALLENGER
+            for agent in selected
+        )
+
+        if has_challenger:
+            return selected
+
+        # Find a challenger from all agents that's not already selected
+        challengers = [
+            a for a in all_agents
+            if a.personality.communication == CommunicationStyle.CHALLENGER
+            and a not in selected
+        ]
+
+        if challengers and selected:
+            # Replace the last selected agent with a challenger
+            challenger = random.choice(challengers)
+            selected[-1] = challenger
+            logger.info(f"Ensured challenger presence: replaced with {challenger.name}")
+
+        return selected
+
+    def _calculate_idea_similarity(
+        self,
+        existing_ideas: List[str],
+    ) -> tuple[float, List[str]]:
+        """
+        Calculate overall similarity among existing ideas.
+
+        Uses Jaccard similarity on tokenized titles.
+
+        Returns:
+            (average_similarity, list of most common keywords)
+        """
+        if len(existing_ideas) < 2:
+            return 0.0, []
+
+        # Tokenize all ideas
+        all_tokens: List[set] = []
+        token_counts: Dict[str, int] = {}
+
+        for idea in existing_ideas:
+            tokens = set(idea.lower().split())
+            all_tokens.append(tokens)
+            for token in tokens:
+                if len(token) > 2:  # Ignore very short tokens
+                    token_counts[token] = token_counts.get(token, 0) + 1
+
+        # Calculate average pairwise similarity
+        total_similarity = 0.0
+        pair_count = 0
+
+        for i in range(len(all_tokens)):
+            for j in range(i + 1, len(all_tokens)):
+                intersection = len(all_tokens[i] & all_tokens[j])
+                union = len(all_tokens[i] | all_tokens[j])
+                if union > 0:
+                    total_similarity += intersection / union
+                    pair_count += 1
+
+        avg_similarity = total_similarity / pair_count if pair_count > 0 else 0.0
+
+        # Find most common keywords (appearing in 50%+ of ideas)
+        threshold = len(existing_ideas) / 2
+        common_keywords = [
+            token for token, count in token_counts.items()
+            if count >= threshold
+        ]
+
+        return avg_similarity, sorted(common_keywords, key=lambda x: token_counts[x], reverse=True)[:5]
+
+    def _get_similarity_feedback(
+        self,
+        previous_ideas: List[str],
+    ) -> str:
+        """
+        Generate feedback about idea similarity for prompts.
+
+        Helps agents understand how to differentiate their ideas.
+        """
+        if len(previous_ideas) < 3:
+            return ""
+
+        avg_similarity, common_keywords = self._calculate_idea_similarity(previous_ideas)
+
+        feedback_parts = []
+
+        if avg_similarity > 0.4:
+            feedback_parts.append(
+                f"\n⚠️ **주의**: 기존 아이디어들의 평균 유사도가 {avg_similarity*100:.0f}%로 높습니다. "
+                "완전히 다른 관점이나 접근 방식을 시도해주세요."
+            )
+
+        if common_keywords:
+            feedback_parts.append(
+                f"\n📊 자주 등장하는 키워드: {', '.join(common_keywords)}\n"
+                "→ 이 키워드들을 피하고 새로운 영역을 탐색해보세요."
+            )
+
+        if avg_similarity > 0.3:
+            feedback_parts.append(
+                "\n💡 차별화 힌트:\n"
+                "- 다른 사용자층을 타겟팅해보세요\n"
+                "- 다른 기술 스택이나 플랫폼을 고려해보세요\n"
+                "- 완전히 다른 비즈니스 모델을 제안해보세요\n"
+                "- 단기/장기 관점을 바꿔보세요"
+            )
+
+        return "\n".join(feedback_parts)
 
     async def _run_divergence_agent(
         self,
@@ -545,6 +783,11 @@ class MultiStageDebate:
             round_num=round_num,
             previous_ideas=previous_ideas,
         )
+
+        # Add similarity feedback to encourage differentiation
+        similarity_feedback = self._get_similarity_feedback(previous_ideas)
+        if similarity_feedback:
+            prompt += similarity_feedback
 
         system_prompt = f"""당신은 {agent.name}입니다.
 역할: {agent.role}

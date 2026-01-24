@@ -7,6 +7,36 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-01-24
+
+### Added
+
+#### Idea Creativity & Diversity Improvements
+- **Diversity-Aware Agent Selection**: Personality-axis balanced selection ensures diverse agent types in each debate round
+- **Challenger Role Guarantee**: Each round now includes at least one challenger-type agent to prevent groupthink
+- **Idea Similarity Feedback**: Agents receive Jaccard similarity scores and differentiation hints when generating ideas
+- **Enhanced Novelty Weight**: Convergence phase now weights novelty at 30% (up from 20%) as the most important criterion
+
+#### Signal Quality Improvements
+- **Content Validation Layer**: Filters signals by minimum length, language (Korean/English), and spam patterns
+- **Semantic Duplicate Removal**: Jaccard similarity-based deduplication removes semantically similar content from different sources
+- **Engagement Thresholds**: Social adapters now filter low-engagement posts (Reddit: 10+ score, 3+ comments; Farcaster: 3+ likes or 1+ recast)
+- **Sentiment Analysis**: Keyword-based sentiment detection (positive/negative/neutral) integrated into signal scoring
+
+### Changed
+- Signal deduplication now uses 3-phase approach: hash dedup → content validation → semantic dedup
+- Convergence evaluation criteria restructured with explicit weighted scoring formula
+- Twitter API search now filters tweets by engagement metrics
+
+### Technical
+- Added `_select_agents_with_diversity()`, `_ensure_challenger_presence()` methods to `MultiStageDebate`
+- Added `_calculate_idea_similarity()`, `_get_similarity_feedback()` methods for differentiation hints
+- Added `_validate_signal_content()`, `_is_semantic_duplicate()` methods to `SignalAggregator`
+- Added `_analyze_sentiment()`, `_score_sentiment()` methods to `SignalScorer`
+- Added `_meets_engagement_threshold()` methods to social adapters
+
+---
+
 ## [0.4.1] - 2026-01-24
 
 ### Added

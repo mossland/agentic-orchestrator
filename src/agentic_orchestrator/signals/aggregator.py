@@ -134,19 +134,189 @@ class SignalAggregator:
 
         return []
 
+    def _validate_signal_content(self, signal: SignalData) -> tuple[bool, str]:
+        """
+        Validate signal content quality.
+
+        Checks:
+        - Minimum title length
+        - Language (Korean or English only)
+        - Spam/ad pattern detection
+
+        Returns:
+            (is_valid, reason)
+        """
+        title = signal.title or ''
+        summary = signal.summary or ''
+
+        # Minimum title length check (10 characters)
+        if len(title.strip()) < 10:
+            return False, "title_too_short"
+
+        # Language validation (Korean or English)
+        if not self._is_valid_language(title):
+            return False, "invalid_language"
+
+        # Spam/ad pattern detection
+        spam_patterns = [
+            'click here', 'buy now', 'free money', 'giveaway',
+            '무료', '할인', '이벤트', '경품', 'airdrop claim',
+            '100x guaranteed', 'limited time', 'act now',
+            'send btc', 'send eth', 'dm for',
+        ]
+        title_lower = title.lower()
+        summary_lower = summary.lower()
+
+        for pattern in spam_patterns:
+            if pattern in title_lower or pattern in summary_lower:
+                return False, f"spam_detected:{pattern}"
+
+        # Check for excessive caps (more than 70% uppercase in title)
+        alpha_chars = [c for c in title if c.isalpha()]
+        if alpha_chars:
+            upper_ratio = sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars)
+            if upper_ratio > 0.7 and len(title) > 20:
+                return False, "excessive_caps"
+
+        return True, "valid"
+
+    def _is_valid_language(self, text: str) -> bool:
+        """
+        Check if text is in Korean or English.
+
+        Uses simple character range detection.
+        """
+        if not text:
+            return False
+
+        # Count character types
+        korean_count = 0
+        english_count = 0
+        other_count = 0
+
+        for char in text:
+            if '\uAC00' <= char <= '\uD7A3' or '\u1100' <= char <= '\u11FF':
+                # Korean syllables or Jamo
+                korean_count += 1
+            elif 'a' <= char.lower() <= 'z':
+                english_count += 1
+            elif char.isalpha():
+                other_count += 1
+
+        total_alpha = korean_count + english_count + other_count
+        if total_alpha == 0:
+            return True  # No alphabetic chars (numbers, symbols) - allow
+
+        # Allow if majority is Korean or English
+        korean_english_ratio = (korean_count + english_count) / total_alpha
+        return korean_english_ratio >= 0.7
+
+    def _is_semantic_duplicate(
+        self,
+        new_signal: SignalData,
+        existing_signals: List[SignalData],
+        threshold: float = 0.7,
+    ) -> bool:
+        """
+        Check if signal is semantically duplicate of existing signals.
+
+        Uses Jaccard similarity on tokenized titles.
+
+        Args:
+            new_signal: Signal to check
+            existing_signals: Existing signals to compare against
+            threshold: Similarity threshold (0.0-1.0)
+
+        Returns:
+            True if duplicate found
+        """
+        if not existing_signals:
+            return False
+
+        new_title = new_signal.title or ''
+        new_tokens = set(new_title.lower().split())
+
+        # Remove common stop words
+        stop_words = {
+            'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be',
+            'to', 'of', 'and', 'in', 'on', 'for', 'with', 'at',
+            '의', '을', '를', '이', '가', '은', '는', '에', '와', '과',
+        }
+        new_tokens = new_tokens - stop_words
+
+        if len(new_tokens) < 3:
+            return False  # Too few tokens to compare meaningfully
+
+        for existing in existing_signals:
+            existing_title = existing.title or ''
+            existing_tokens = set(existing_title.lower().split()) - stop_words
+
+            if len(existing_tokens) < 3:
+                continue
+
+            # Calculate Jaccard similarity
+            intersection = len(new_tokens & existing_tokens)
+            union = len(new_tokens | existing_tokens)
+
+            if union > 0:
+                similarity = intersection / union
+                if similarity >= threshold:
+                    logger.debug(
+                        f"Semantic duplicate found: '{new_title[:50]}' "
+                        f"similar to '{existing_title[:50]}' ({similarity:.2f})"
+                    )
+                    return True
+
+        return False
+
     def _deduplicate(self, signals: List[SignalData]) -> List[SignalData]:
-        """Remove duplicate signals based on content hash."""
-        seen: Dict[str, SignalData] = {}
+        """
+        Remove duplicate signals using both hash and semantic similarity.
+
+        Two-pass deduplication:
+        1. Exact match via content hash
+        2. Semantic similarity via Jaccard on titles
+        """
+        # Phase 1: Hash-based deduplication
+        seen_hashes: Dict[str, SignalData] = {}
 
         for signal in signals:
-            # Create hash from title and URL
             content = f"{signal.title}:{signal.url or ''}"
             content_hash = hashlib.sha256(content.encode()).hexdigest()[:16]
 
-            if content_hash not in seen:
-                seen[content_hash] = signal
+            if content_hash not in seen_hashes:
+                seen_hashes[content_hash] = signal
 
-        return list(seen.values())
+        hash_deduped = list(seen_hashes.values())
+        logger.info(f"Hash dedup: {len(signals)} -> {len(hash_deduped)}")
+
+        # Phase 2: Content validation
+        validated: List[SignalData] = []
+        filtered_count = 0
+
+        for signal in hash_deduped:
+            is_valid, reason = self._validate_signal_content(signal)
+            if is_valid:
+                validated.append(signal)
+            else:
+                filtered_count += 1
+                logger.debug(f"Filtered signal: {reason} - '{signal.title[:50]}'")
+
+        logger.info(f"Content validation: {len(hash_deduped)} -> {len(validated)} (filtered {filtered_count})")
+
+        # Phase 3: Semantic deduplication
+        final_signals: List[SignalData] = []
+        semantic_dupes = 0
+
+        for signal in validated:
+            if not self._is_semantic_duplicate(signal, final_signals, threshold=0.7):
+                final_signals.append(signal)
+            else:
+                semantic_dupes += 1
+
+        logger.info(f"Semantic dedup: {len(validated)} -> {len(final_signals)} (dupes: {semantic_dupes})")
+
+        return final_signals
 
     async def _translate_to_korean(self, text: str) -> Optional[str]:
         """Translate text to Korean using Claude API."""

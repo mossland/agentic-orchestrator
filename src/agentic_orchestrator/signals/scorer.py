@@ -22,6 +22,10 @@ class ScoringConfig:
     # Mossland-specific keywords (extra boost)
     mossland_keywords: Set[str] = None
 
+    # Sentiment keywords for analysis
+    sentiment_positive: Set[str] = None
+    sentiment_negative: Set[str] = None
+
     # Recency weight (signals lose value over time)
     recency_decay_hours: int = 72
 
@@ -93,6 +97,33 @@ class ScoringConfig:
                 "location based",
             }
 
+        if self.sentiment_positive is None:
+            self.sentiment_positive = {
+                # English positive
+                "bullish", "growth", "success", "breakthrough", "innovation",
+                "partnership", "launch", "upgrade", "milestone", "achievement",
+                "profit", "rally", "surge", "soar", "boom", "record high",
+                "adoption", "integration", "expansion", "funding", "investment",
+                "promising", "exciting", "revolutionary", "game-changing",
+                # Korean positive
+                "성공", "상승", "호재", "돌파", "혁신", "파트너십", "출시",
+                "성장", "수익", "달성", "급등", "신고가", "도입", "확장",
+            }
+
+        if self.sentiment_negative is None:
+            self.sentiment_negative = {
+                # English negative
+                "crash", "hack", "scam", "fraud", "rug pull", "exploit",
+                "vulnerability", "failure", "loss", "dump", "plunge", "collapse",
+                "bankrupt", "lawsuit", "investigation", "warning", "risk",
+                "fud", "bear", "correction", "selloff", "panic", "fear",
+                "shutdown", "suspend", "delist", "ban", "sanctions",
+                # Korean negative
+                "폭락", "해킹", "사기", "러그풀", "취약점", "실패", "손실",
+                "파산", "소송", "조사", "경고", "위험", "하락", "매도",
+                "정지", "상폐", "제재", "금지",
+            }
+
 
 class SignalScorer:
     """
@@ -139,6 +170,10 @@ class SignalScorer:
         # Engagement metrics (if available)
         engagement_boost = self._score_engagement(signal)
         score += engagement_boost
+
+        # Sentiment adjustment
+        sentiment_adjustment = self._score_sentiment(signal)
+        score += sentiment_adjustment
 
         # Normalize to 0-1 range
         score = max(0.0, min(1.0, score))
@@ -216,6 +251,71 @@ class SignalScorer:
 
         return min(0.15, base_boost)
 
+    def _analyze_sentiment(self, text: str) -> tuple[str, float]:
+        """
+        Analyze sentiment of text using keyword-based detection.
+
+        Args:
+            text: Text to analyze
+
+        Returns:
+            (sentiment, confidence)
+            - sentiment: 'positive', 'negative', or 'neutral'
+            - confidence: 0.0-1.0 indicating how confident the classification is
+        """
+        text_lower = text.lower()
+
+        pos_count = 0
+        neg_count = 0
+
+        # Count positive keywords
+        for keyword in self.config.sentiment_positive:
+            if keyword in text_lower:
+                pos_count += 1
+
+        # Count negative keywords
+        for keyword in self.config.sentiment_negative:
+            if keyword in text_lower:
+                neg_count += 1
+
+        total = pos_count + neg_count
+
+        if total == 0:
+            return 'neutral', 0.5
+
+        # Calculate sentiment
+        if neg_count > pos_count + 1:
+            # Strongly negative
+            confidence = min(0.9, 0.5 + (neg_count - pos_count) * 0.1)
+            return 'negative', confidence
+        elif pos_count > neg_count + 1:
+            # Strongly positive
+            confidence = min(0.9, 0.5 + (pos_count - neg_count) * 0.1)
+            return 'positive', confidence
+        else:
+            # Mixed or neutral
+            return 'neutral', 0.5
+
+    def _score_sentiment(self, signal: SignalData) -> float:
+        """
+        Score adjustment based on sentiment.
+
+        Positive sentiment gets slight boost, negative gets slight penalty.
+        """
+        text = f"{signal.title} {signal.summary or ''}"
+        sentiment, confidence = self._analyze_sentiment(text)
+
+        # Store sentiment in metadata for later use
+        signal.metadata["sentiment"] = sentiment
+        signal.metadata["sentiment_confidence"] = confidence
+
+        if sentiment == 'positive':
+            return 0.05 * confidence  # Slight boost for positive
+        elif sentiment == 'negative':
+            return -0.03 * confidence  # Slight penalty for negative
+        else:
+            return 0.0
+
     def _score_engagement(self, signal: SignalData) -> float:
         """Score based on engagement metrics."""
         boost = 0.0
@@ -271,6 +371,9 @@ class SignalScorer:
         """Explain how a signal was scored."""
         text = f"{signal.title} {signal.summary or ''}".lower()
 
+        # Analyze sentiment
+        sentiment, sentiment_confidence = self._analyze_sentiment(text)
+
         explanation = {
             "base_score": 0.5,
             "category": {
@@ -281,6 +384,11 @@ class SignalScorer:
             "mossland_keywords_found": [],
             "source_boost": self._score_source(signal),
             "engagement_boost": self._score_engagement(signal),
+            "sentiment": {
+                "value": sentiment,
+                "confidence": sentiment_confidence,
+                "adjustment": self._score_sentiment(signal),
+            },
             "final_score": self.score(signal),
         }
 
@@ -292,5 +400,13 @@ class SignalScorer:
         for keyword in self.config.mossland_keywords:
             if keyword in text:
                 explanation["mossland_keywords_found"].append(keyword)
+
+        # Find sentiment keywords
+        explanation["sentiment_positive_found"] = [
+            kw for kw in self.config.sentiment_positive if kw in text
+        ]
+        explanation["sentiment_negative_found"] = [
+            kw for kw in self.config.sentiment_negative if kw in text
+        ]
 
         return explanation

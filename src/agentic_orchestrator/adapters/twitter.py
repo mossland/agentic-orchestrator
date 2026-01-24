@@ -29,6 +29,15 @@ class TwitterAdapter(BaseAdapter):
     - Rate limiting and retry logic
     """
 
+    # Minimum engagement thresholds for quality filtering
+    # Note: Nitter RSS doesn't provide engagement metrics,
+    # so these only apply to Twitter API access
+    MIN_ENGAGEMENT = {
+        'likes': 5,
+        'retweets': 2,
+        'replies': 0,
+    }
+
     # Twitter/X accounts to monitor (crypto/Web3/AI influencers)
     TRACKED_ACCOUNTS: List[str] = [
         # Mossland related
@@ -264,6 +273,12 @@ class TwitterAdapter(BaseAdapter):
                 if response.status_code == 200:
                     data = response.json()
                     for tweet in data.get("data", []):
+                        metrics = tweet.get("public_metrics", {})
+
+                        # Skip low-engagement tweets
+                        if not self._meets_engagement_threshold(metrics):
+                            continue
+
                         signal = SignalData(
                             source=self.name,
                             category="crypto",  # Keywords are crypto-focused
@@ -273,7 +288,9 @@ class TwitterAdapter(BaseAdapter):
                                 "type": "tweet_api",
                                 "tweet_id": tweet.get("id"),
                                 "author_id": tweet.get("author_id"),
-                                "metrics": tweet.get("public_metrics", {}),
+                                "metrics": metrics,
+                                "likes": metrics.get("like_count", 0),
+                                "retweets": metrics.get("retweet_count", 0),
                             },
                             metadata={
                                 "platform": "twitter",
@@ -286,6 +303,33 @@ class TwitterAdapter(BaseAdapter):
             print(f"Error searching Twitter API: {e}")
 
         return signals
+
+    def _meets_engagement_threshold(
+        self,
+        metrics: Dict[str, Any],
+    ) -> bool:
+        """
+        Check if tweet meets minimum engagement threshold.
+
+        Args:
+            metrics: Public metrics from Twitter API
+
+        Returns:
+            True if meets threshold
+        """
+        likes = metrics.get('like_count', 0) or 0
+        retweets = metrics.get('retweet_count', 0) or 0
+        replies = metrics.get('reply_count', 0) or 0
+
+        # Check individual thresholds
+        if likes >= self.MIN_ENGAGEMENT['likes']:
+            return True
+        if retweets >= self.MIN_ENGAGEMENT['retweets']:
+            return True
+
+        # Check combined engagement
+        total = likes + (retweets * 2) + replies
+        return total >= 8  # Minimum combined score
 
     def _categorize_tweet(self, content: str) -> str:
         """Categorize tweet based on content."""

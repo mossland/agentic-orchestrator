@@ -7,6 +7,36 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.4.2] - 2026-01-24
+
+### 추가됨
+
+#### 아이디어 창의성 및 다양성 향상
+- **다양성 인식 에이전트 선택**: 성격 축 기반 균형 선택으로 각 토론 라운드에서 다양한 에이전트 타입 보장
+- **도전자 역할 보장**: 집단사고 방지를 위해 각 라운드에 최소 1명의 도전자 성격 에이전트 포함
+- **아이디어 유사도 피드백**: 아이디어 생성 시 Jaccard 유사도 점수와 차별화 힌트 제공
+- **참신성 가중치 강화**: 수렴 단계에서 참신성 가중치를 30%로 상향 (기존 20%, 가장 중요한 기준)
+
+#### 시그널 품질 향상
+- **콘텐츠 검증 레이어**: 최소 길이, 언어 (한국어/영어), 스팸 패턴으로 시그널 필터링
+- **의미론적 중복 제거**: Jaccard 유사도 기반 중복 제거로 다른 소스의 유사 콘텐츠 필터링
+- **참여도 임계값**: 소셜 어댑터에서 저참여 게시물 필터링 (Reddit: 10+ 점수, 3+ 댓글; Farcaster: 3+ 좋아요 또는 1+ 리캐스트)
+- **감성 분석**: 키워드 기반 감성 감지 (긍정/부정/중립)를 시그널 점수에 통합
+
+### 변경됨
+- 시그널 중복 제거가 3단계 접근 방식 사용: 해시 중복 제거 → 콘텐츠 검증 → 의미론적 중복 제거
+- 수렴 평가 기준이 명시적 가중치 점수 공식으로 재구성됨
+- Twitter API 검색이 참여도 메트릭으로 트윗 필터링
+
+### 기술 사항
+- `MultiStageDebate`에 `_select_agents_with_diversity()`, `_ensure_challenger_presence()` 메서드 추가
+- 차별화 힌트를 위한 `_calculate_idea_similarity()`, `_get_similarity_feedback()` 메서드 추가
+- `SignalAggregator`에 `_validate_signal_content()`, `_is_semantic_duplicate()` 메서드 추가
+- `SignalScorer`에 `_analyze_sentiment()`, `_score_sentiment()` 메서드 추가
+- 소셜 어댑터들에 `_meets_engagement_threshold()` 메서드 추가
+
+---
+
 ## [0.4.1] - 2026-01-24
 
 ### 추가됨

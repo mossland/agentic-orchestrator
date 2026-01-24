@@ -95,7 +95,14 @@ export function Pipeline({ stages }: PipelineProps) {
       status: liveData.stages.plans.status as 'active' | 'completed' | 'idle',
       rate: liveData.stages.plans.rate,
     },
-  ] : stages.map(s => ({ ...s, rate: '' }));
+    {
+      id: 'projects',
+      name: 'Projects',
+      count: liveData.stages.projects?.count || 0,
+      status: (liveData.stages.projects?.status || 'idle') as 'active' | 'completed' | 'idle',
+      rate: liveData.stages.projects?.rate || '',
+    },
+  ] : [...stages.map(s => ({ ...s, rate: '' })), { id: 'projects', name: 'Projects', count: 0, status: 'idle' as const, rate: '' }];
 
   const conversionRates = liveData?.conversion_rates;
 
@@ -218,6 +225,7 @@ export function Pipeline({ stages }: PipelineProps) {
                         {index === 0 && `${conversionRates.signals_to_trends}%`}
                         {index === 1 && `${conversionRates.trends_to_ideas}%`}
                         {index === 2 && `${conversionRates.ideas_to_plans}%`}
+                        {index === 3 && `${conversionRates.plans_to_projects || 0}%`}
                       </div>
                     )}
                   </div>
@@ -240,6 +248,8 @@ export function Pipeline({ stages }: PipelineProps) {
             <span>{conversionRates.trends_to_ideas}%</span>
             <span className="text-[#39ff14]">→</span>
             <span>{conversionRates.ideas_to_plans}%</span>
+            <span className="text-[#39ff14]">→</span>
+            <span>{conversionRates.plans_to_projects || 0}%</span>
           </div>
         </div>
       )}
@@ -264,6 +274,7 @@ export function Pipeline({ stages }: PipelineProps) {
                     item.type === 'SIGNAL' ? 'bg-[#00ffff]/20 text-[#00ffff]' :
                     item.type === 'TREND' ? 'bg-[#bd93f9]/20 text-[#bd93f9]' :
                     item.type === 'DEBATE' ? 'bg-[#ff6b35]/20 text-[#ff6b35]' :
+                    item.type === 'PROJECT' ? 'bg-[#bd93f9]/20 text-[#bd93f9]' :
                     'bg-[#39ff14]/20 text-[#39ff14]'
                   }`}>
                     [{item.type}]

@@ -305,11 +305,13 @@ export interface PipelineLiveResponse {
     trends: { count: number; rate: string; status: string };
     ideas: { count: number; rate: string; status: string };
     plans: { count: number; rate: string; status: string };
+    projects: { count: number; rate: string; status: string };
   };
   conversion_rates: {
     signals_to_trends: number;
     trends_to_ideas: number;
     ideas_to_plans: number;
+    plans_to_projects: number;
   };
   processing: Array<{
     type: string;

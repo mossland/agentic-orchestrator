@@ -951,7 +951,7 @@ async def get_pipeline_live(session: Session = Depends(get_session)):
         - processing: Currently processing items
         - rates: Hourly/daily generation rates
     """
-    from ..db.models import Signal, Trend, Idea, DebateSession, Plan
+    from ..db.models import Signal, Trend, Idea, DebateSession, Plan, Project
     from sqlalchemy import func, desc
     from datetime import timedelta
 
@@ -966,6 +966,7 @@ async def get_pipeline_live(session: Session = Depends(get_session)):
     total_trends = session.query(func.count(Trend.id)).scalar() or 0
     total_ideas = session.query(func.count(Idea.id)).scalar() or 0
     total_plans = session.query(func.count(Plan.id)).scalar() or 0
+    total_projects = session.query(func.count(Project.id)).scalar() or 0
 
     # Get hourly rates
     signals_last_hour = session.query(func.count(Signal.id)).filter(
@@ -984,10 +985,15 @@ async def get_pipeline_live(session: Session = Depends(get_session)):
         Plan.created_at >= last_7d
     ).scalar() or 0
 
+    projects_last_7d = session.query(func.count(Project.id)).filter(
+        Project.created_at >= last_7d
+    ).scalar() or 0
+
     # Calculate conversion rates
     signals_to_trends = (total_trends / total_signals * 100) if total_signals > 0 else 0
     trends_to_ideas = (total_ideas / total_trends * 100) if total_trends > 0 else 0
     ideas_to_plans = (total_plans / total_ideas * 100) if total_ideas > 0 else 0
+    plans_to_projects = (total_projects / total_plans * 100) if total_plans > 0 else 0
 
     # Get currently processing items
     processing = []
@@ -1043,6 +1049,22 @@ async def get_pipeline_live(session: Session = Depends(get_session)):
             "score": trend.score,
         })
 
+    # Projects being generated
+    generating_projects = (
+        session.query(Project)
+        .filter(Project.status == "generating")
+        .order_by(desc(Project.created_at))
+        .limit(2)
+        .all()
+    )
+    for proj in generating_projects:
+        processing.append({
+            "type": "PROJECT",
+            "title": proj.name[:50] + "..." if len(proj.name) > 50 else proj.name,
+            "time_ago": "generating",
+            "status": proj.status,
+        })
+
     return {
         "stages": {
             "signals": {
@@ -1065,11 +1087,17 @@ async def get_pipeline_live(session: Session = Depends(get_session)):
                 "rate": f"+{plans_last_7d}/wk",
                 "status": "active" if plans_last_7d > 0 else "idle",
             },
+            "projects": {
+                "count": total_projects,
+                "rate": f"+{projects_last_7d}/wk",
+                "status": "active" if any(p.status == "generating" for p in generating_projects) else ("idle" if projects_last_7d == 0 else "completed"),
+            },
         },
         "conversion_rates": {
             "signals_to_trends": round(signals_to_trends, 1),
             "trends_to_ideas": round(trends_to_ideas, 1),
             "ideas_to_plans": round(ideas_to_plans, 1),
+            "plans_to_projects": round(plans_to_projects, 1),
         },
         "processing": processing[:5],  # Limit to 5 items
         "timestamp": now.isoformat(),

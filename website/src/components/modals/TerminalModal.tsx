@@ -11,6 +11,7 @@ import { TrendDetail } from '../details/TrendDetail';
 import { IdeaDetail } from '../details/IdeaDetail';
 import { DebateDetail } from '../details/DebateDetail';
 import { PlanDetail } from '../details/PlanDetail';
+import { ProjectDetail } from '../details/ProjectDetail';
 import { AgentDetail } from '../details/AgentDetail';
 import { StatsDetail } from '../details/StatsDetail';
 import { PipelineDetail } from '../details/PipelineDetail';
@@ -34,6 +35,8 @@ function getDetailComponent(type: ModalType, data: ModalData): ReactNode {
       return <DebateDetail data={data} />;
     case 'plan':
       return <PlanDetail data={data} />;
+    case 'project':
+      return <ProjectDetail data={data} />;
     case 'agent':
       return <AgentDetail data={data} />;
     case 'stats':
@@ -53,6 +56,7 @@ function getModalTitle(type: ModalType, t: (key: string) => string): string {
     idea: t('modal.idea.title'),
     debate: t('modal.debate.title'),
     plan: t('modal.plan.title'),
+    project: t('modal.project.title'),
     agent: t('modal.agent.title'),
     stats: 'System Statistics',
     pipeline: 'Pipeline Status',
@@ -68,6 +72,7 @@ function getModalColor(type: ModalType): string {
     idea: 'green',
     debate: 'orange',
     plan: 'cyan',
+    project: 'green',
     agent: 'green',
     stats: 'cyan',
     pipeline: 'green',

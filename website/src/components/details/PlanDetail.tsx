@@ -369,17 +369,52 @@ export function PlanDetail({ data }: PlanDetailProps) {
 
         {/* Project generating */}
         {(projectState.generating || projectState.project?.status === 'generating') && (
-          <div className="flex items-center gap-3">
-            <div className="animate-spin">
-              <svg className="w-5 h-5 text-[#00ffff]" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-              </svg>
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="animate-spin">
+                <svg className="w-5 h-5 text-[#00ffff]" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+              </div>
+              <span className="text-[#00ffff] animate-pulse">
+                $ generating_project
+                <span className="cursor-blink">▋</span>
+              </span>
             </div>
-            <span className="text-[#00ffff] animate-pulse">
-              $ generating_project
-              <span className="cursor-blink">▋</span>
-            </span>
+
+            {/* Progress Steps */}
+            <div className="border border-[#21262d] rounded p-3 space-y-2">
+              <div className="text-xs text-[#6b7280] uppercase mb-2">
+                {locale === 'ko' ? '생성 단계' : 'Generation Steps'}
+              </div>
+              {[
+                { step: 1, en: 'Loading plan data', ko: 'Plan 데이터 로드', icon: '📄' },
+                { step: 2, en: 'Parsing markdown', ko: '마크다운 파싱', icon: '🔍' },
+                { step: 3, en: 'Detecting tech stack', ko: '기술 스택 감지', icon: '⚙️' },
+                { step: 4, en: 'Generating templates', ko: '템플릿 생성', icon: '📝' },
+                { step: 5, en: 'LLM code generation', ko: 'LLM 코드 생성', icon: '🤖' },
+                { step: 6, en: 'Writing files', ko: '파일 저장', icon: '💾' },
+              ].map((item, idx) => (
+                <div key={item.step} className="flex items-center gap-2 text-xs">
+                  <span className="w-4 text-center">{item.icon}</span>
+                  <span className={idx < 2 ? 'text-[#39ff14]' : 'text-[#6b7280]'}>
+                    {idx < 2 ? '✓' : idx === 2 ? '●' : '○'}
+                  </span>
+                  <span className={idx <= 2 ? 'text-[#c0c0c0]' : 'text-[#6b7280]'}>
+                    {locale === 'ko' ? item.ko : item.en}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* LLM Models Info */}
+            <div className="text-xs text-[#6b7280]">
+              <span>{locale === 'ko' ? '사용 모델: ' : 'Models: '}</span>
+              <span className="text-[#00ffff]">glm-4.7-flash</span>
+              <span className="mx-1">→</span>
+              <span className="text-[#bd93f9]">qwen2.5:32b</span>
+            </div>
           </div>
         )}
 

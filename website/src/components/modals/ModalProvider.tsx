@@ -10,6 +10,7 @@ export type ModalType =
   | 'idea'
   | 'debate'
   | 'plan'
+  | 'project'
   | 'agent'
   | 'stats'
   | 'pipeline';

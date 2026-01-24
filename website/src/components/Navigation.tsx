@@ -15,6 +15,7 @@ export function Navigation() {
     { href: '/', labelKey: 'nav.dashboard', icon: '⌂' },
     { href: '/ideas', labelKey: 'nav.ideas', icon: '💡' },
     { href: '/debates', labelKey: 'nav.debates', icon: '💬' },
+    { href: '/projects', labelKey: 'nav.projects', icon: '📁' },
     { href: '/agents', labelKey: 'nav.agents', icon: '🤖' },
     { href: '/system', labelKey: 'nav.system', icon: '⚙' },
   ];
@@ -30,7 +31,7 @@ export function Navigation() {
           <span className="text-[#6b7280]">::</span>
           <span className="text-[#00ffff] text-sm">AO</span>
           <span className="hidden sm:inline-block text-[#6b7280] text-xs ml-2">
-            v0.5.1
+            v0.6.0
           </span>
         </Link>
 

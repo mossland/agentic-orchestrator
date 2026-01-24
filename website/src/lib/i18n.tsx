@@ -19,6 +19,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.trends': 'Trends',
     'nav.backlog': 'Backlog',
     'nav.system': 'System',
+    'nav.projects': 'Projects',
     'nav.running': 'RUNNING',
     
     'dashboard.title': 'Agentic Orchestrator',
@@ -123,6 +124,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'modal.idea.title': 'Idea Details',
     'modal.debate.title': 'Debate Session',
     'modal.plan.title': 'Plan Document',
+    'modal.project.title': 'Project Details',
     'modal.agent.title': 'Agent Profile',
     'modal.close': 'Close',
 
@@ -526,6 +528,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'nav.trends': '트렌드',
     'nav.backlog': '백로그',
     'nav.system': '시스템',
+    'nav.projects': '프로젝트',
     'nav.running': '실행중',
     
     'dashboard.title': 'Agentic Orchestrator',
@@ -630,6 +633,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'modal.idea.title': '아이디어 상세',
     'modal.debate.title': '토론 세션',
     'modal.plan.title': '플랜 문서',
+    'modal.project.title': '프로젝트 상세',
     'modal.agent.title': '에이전트 프로필',
     'modal.close': '닫기',
 

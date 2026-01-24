@@ -1,5 +1,13 @@
 # Planning Review Prompt
 
+> **⚠️ Legacy Document**
+>
+> 이 프롬프트 파일은 초기 버전(v0.1.0)에서 사용되었습니다.
+> 현재 시스템은 `src/agentic_orchestrator/debate/protocol.py`에 내장된 프롬프트를 사용합니다.
+> 이 파일은 참조용으로만 유지됩니다.
+
+---
+
 Review the planning documents and provide structured feedback.
 
 ## Review Scope

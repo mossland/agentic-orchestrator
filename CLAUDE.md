@@ -94,6 +94,12 @@ agentic-orchestrator/
 ├── data/                        # 데이터 디렉토리
 │   ├── orchestrator.db          # SQLite 데이터베이스
 │   └── trends/                  # 트렌드 분석 결과 (마크다운)
+├── projects/                    # 생성된 프로젝트 (향후 기능)
+│   └── README.md                # 프로젝트 목록
+├── docs/                        # 설계 문서
+│   ├── pipeline.md              # 아이디어 생성 파이프라인
+│   ├── labels.md                # GitHub 라벨 가이드
+│   └── projects.md              # 프로젝트 관리 가이드
 └── ecosystem.config.js          # PM2 설정
 ```
 
@@ -521,6 +527,38 @@ git commit -m "docs: update documentation for recent changes"
 - `refactor:` - 코드 리팩토링
 - `style:` - UI/UX 변경
 - `chore:` - 기타 변경
+
+## 향후 구현 예정 기능
+
+### Plan → Project 자동 생성
+
+**상태:** 구현 예정
+
+승인된 Plan을 `projects/` 폴더에 실제 프로젝트로 변환하는 기능:
+
+```
+Plan (DB) → 프로젝트 스캐폴드 생성 → projects/{project-name}/
+```
+
+**계획된 기능:**
+- Plan 파싱 (마크다운 → 구조화된 데이터)
+- 프로젝트 폴더 자동 생성
+- README.md, PLAN.md 자동 생성
+- 기술 스택별 보일러플레이트 코드 생성 (LLM 활용)
+- 웹 UI에서 "Generate Project" 버튼
+
+자세한 내용: `docs/projects.md`
+
+### GitHub 라벨 기반 승격 워크플로우
+
+**상태:** 구현 예정
+
+GitHub Issues에서 라벨을 추가하면 자동으로 처리:
+
+- `promote:to-plan`: Idea → Plan 자동 생성
+- `promote:to-dev`: Plan → Project 스캐폴드 생성
+
+자세한 내용: `docs/labels.md`
 
 ## 참고 링크
 

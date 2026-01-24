@@ -304,18 +304,24 @@ Auto-Scorer는 4가지 차원으로 아이디어를 평가합니다:
 
 ## GitHub 연동
 
-모든 아이디어와 플랜은 GitHub Issues로 생성됩니다.
+> **참고**: 현재 시스템은 **DB 중심**입니다. GitHub Issues는 가시성을 위해 선택적으로 생성되며, 기본 데이터 저장소는 SQLite입니다.
+
+아이디어와 플랜은 DB에 저장되고, 선택적으로 GitHub Issues로 생성됩니다.
 
 ### 라벨 체계
 
-| 라벨 | 용도 |
-|------|------|
-| `type:idea` | 아이디어 이슈 |
-| `type:plan` | 플랜 이슈 |
-| `status:backlog` | 백로그 대기 |
-| `promote:to-plan` | 플랜 생성 대상 |
-| `generated:by-orchestrator` | 오케스트레이터가 자동 생성 |
-| `source:trend` | 트렌드 분석에서 생성 |
+| 라벨 | 용도 | 상태 |
+|------|------|------|
+| `type:idea` | 아이디어 이슈 | 활성 |
+| `type:plan` | 플랜 이슈 | 활성 |
+| `status:backlog` | 백로그 대기 | 활성 |
+| `status:promoted` | 고점수 아이디어 | 활성 |
+| `generated:by-orchestrator` | 오케스트레이터가 자동 생성 | 활성 |
+| `source:debate` | 토론에서 생성 | 활성 |
+| `promote:to-plan` | 플랜 생성 대상 | *향후 구현* |
+| `promote:to-dev` | 개발 시작 대상 | *향후 구현* |
+
+자세한 내용은 [labels.md](labels.md) 참조.
 
 ### Issue 본문 예시
 
@@ -388,3 +394,27 @@ FROM debate_sessions
 ORDER BY started_at DESC
 LIMIT 5;
 ```
+
+---
+
+## 프로젝트 생성 (향후 기능)
+
+> **상태**: 구현 예정. 현재 `projects/` 폴더는 비어 있습니다.
+
+Plan이 승인되면 `projects/` 폴더에 프로젝트 스캐폴드가 자동 생성될 예정입니다.
+
+### 계획된 워크플로우
+
+```
+Plan (DB)
+    ↓
+프로젝트 이름 생성 (kebab-case)
+    ↓
+projects/{project-name}/
+    ├── README.md          # 프로젝트 소개 + 배경
+    ├── PLAN.md            # 원본 Plan 문서
+    ├── src/               # 생성된 소스 코드
+    └── docs/              # 추가 문서
+```
+
+자세한 내용은 [projects.md](projects.md) 참조.

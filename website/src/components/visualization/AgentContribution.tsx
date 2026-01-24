@@ -4,6 +4,41 @@ import { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 
+// Helper function to extract readable text from JSON content
+function extractReadableText(content: string): string {
+  if (!content) return '';
+
+  try {
+    // Remove markdown code block if present
+    const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    const jsonStr = codeBlockMatch ? codeBlockMatch[1].trim() : content.trim();
+
+    const parsed = JSON.parse(jsonStr);
+
+    // Try to extract readable text in order of preference
+    if (parsed.core_analysis) return parsed.core_analysis;
+    if (parsed.idea_title) return parsed.idea_title;
+    if (parsed.proposal?.description) return parsed.proposal.description;
+    if (parsed.summary) return parsed.summary;
+
+    // Get first string value
+    for (const value of Object.values(parsed)) {
+      if (typeof value === 'string' && value.length > 10) {
+        return value;
+      }
+    }
+    return content;
+  } catch {
+    // Not JSON - try regex extraction
+    const coreMatch = content.match(/"core_analysis"\s*:\s*"([^"]+)"/);
+    if (coreMatch) return coreMatch[1];
+    const titleMatch = content.match(/"idea_title"\s*:\s*"([^"]+)"/);
+    if (titleMatch) return titleMatch[1];
+    // Return without JSON artifacts
+    return content.replace(/```json/g, '').replace(/```/g, '').replace(/^\s*\{/g, '').slice(0, 150);
+  }
+}
+
 interface DebateMessage {
   id: string;
   agent_id: string;
@@ -81,9 +116,10 @@ function analyzeContributions(messages: DebateMessage[]): AgentStats[] {
       stance = 'advocate';
     }
 
-    // Get a key quote (first message, truncated)
+    // Get a key quote (first message, parsed and truncated)
     const firstMsg = agent.messages[0];
-    const keyQuote = firstMsg.content.slice(0, 100) + (firstMsg.content.length > 100 ? '...' : '');
+    const readableContent = extractReadableText(firstMsg.content);
+    const keyQuote = readableContent.slice(0, 100) + (readableContent.length > 100 ? '...' : '');
 
     // Determine phase from message type
     let phase = 'general';

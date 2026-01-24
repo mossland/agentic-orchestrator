@@ -19,6 +19,34 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+async def _translate_to_korean(router, text: str) -> Optional[str]:
+    """Translate English text to Korean using the LLM router."""
+    if not text or len(text.strip()) < 5:
+        return None
+
+    try:
+        prompt = f"""Translate the following English text to Korean.
+Keep the translation natural and concise. Only return the Korean translation, nothing else.
+
+Text: {text}
+
+Korean translation:"""
+
+        response = await router.route_request(
+            prompt=prompt,
+            prefer_claude=True,  # Use Claude for better translation quality
+            max_tokens=500,
+        )
+
+        if response and response.content:
+            return response.content.strip()
+
+    except Exception as e:
+        logger.warning(f"Translation failed for text: {text[:50]}... Error: {e}")
+
+    return None
+
+
 async def _signal_collect_async():
     """Async implementation of signal collection."""
     from ..signals import SignalAggregator, SignalStorage
@@ -109,15 +137,21 @@ async def _analyze_trends_async():
         logger.info("Analyzing 24h trends...")
         analysis = await analyzer.analyze_trends(feed_items, "24h", max_trends=10)
 
-        # Save trends to database
+        # Save trends to database with Korean translations
         saved_count = 0
         for trend in analysis.trends:
             try:
+                # Translate trend name and description to Korean
+                name_ko = await _translate_to_korean(router, trend.topic)
+                description_ko = await _translate_to_korean(router, trend.summary)
+
                 trend_repo.create({
                     'id': str(uuid.uuid4())[:8],
                     'period': trend.time_period,
                     'name': trend.topic,
+                    'name_ko': name_ko,
                     'description': trend.summary,
+                    'description_ko': description_ko,
                     'score': trend.score,
                     'signal_count': trend.article_count,
                     'category': trend.category,

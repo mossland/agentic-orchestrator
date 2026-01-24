@@ -182,6 +182,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'detail.expand': 'Expand',
     'detail.collapse': 'Collapse',
     'detail.clickToShowMessages': 'Click expand to show agent messages',
+    'detail.originalContent': 'Original',
+    'detail.translatedContent': 'Translated',
+    'detail.showOriginal': 'Show Original',
+    'detail.showTranslation': 'Show Korean',
+    'detail.noTranslation': 'Translation not available',
 
     // Journey
     'journey.signalCollected': 'Signal Collected',
@@ -418,6 +423,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'detail.expand': '펼치기',
     'detail.collapse': '접기',
     'detail.clickToShowMessages': '에이전트 메시지를 보려면 펼치기를 클릭하세요',
+    'detail.originalContent': '원문',
+    'detail.translatedContent': '번역',
+    'detail.showOriginal': '원문 보기',
+    'detail.showTranslation': '한글 보기',
+    'detail.noTranslation': '번역 없음',
 
     // Journey
     'journey.signalCollected': '신호 수집',

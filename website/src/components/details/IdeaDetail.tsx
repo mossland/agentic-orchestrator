@@ -20,7 +20,7 @@ interface IdeaWithDetails {
 }
 
 export function IdeaDetail({ data }: IdeaDetailProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [ideaData, setIdeaData] = useState<IdeaWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +171,7 @@ export function IdeaDetail({ data }: IdeaDetailProps) {
                       )}
                     </div>
                     <p className="text-sm text-[#c0c0c0] leading-relaxed whitespace-pre-wrap line-clamp-4">
-                      {msg.content_ko || msg.content}
+                      {locale === 'ko' && msg.content_ko ? msg.content_ko : msg.content}
                     </p>
                   </motion.div>
                 ))}

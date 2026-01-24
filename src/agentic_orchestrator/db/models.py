@@ -112,7 +112,9 @@ class Signal(Base):
     source = Column(String(50), nullable=False, index=True)
     category = Column(String(50), nullable=False, index=True)
     title = Column(Text, nullable=False)
+    title_ko = Column(Text)  # Korean translation
     summary = Column(Text)
+    summary_ko = Column(Text)  # Korean translation
     url = Column(Text)
     raw_data = Column(JSON)
     score = Column(Float, default=0.0, index=True)
@@ -134,7 +136,9 @@ class Signal(Base):
             "source": self.source,
             "category": self.category,
             "title": self.title,
+            "title_ko": self.title_ko,
             "summary": self.summary,
+            "summary_ko": self.summary_ko,
             "url": self.url,
             "score": self.score,
             "sentiment": self.sentiment,
@@ -152,7 +156,9 @@ class Trend(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     period = Column(String(20), nullable=False, index=True)  # 24h, 7d, 30d
     name = Column(String(255), nullable=False)
+    name_ko = Column(String(500))  # Korean translation
     description = Column(Text)
+    description_ko = Column(Text)  # Korean translation
     score = Column(Float, nullable=False, index=True)
     signal_count = Column(Integer, default=0)
     category = Column(String(50))
@@ -171,7 +177,9 @@ class Trend(Base):
             "id": self.id,
             "period": self.period,
             "name": self.name,
+            "name_ko": self.name_ko,
             "description": self.description,
+            "description_ko": self.description_ko,
             "score": self.score,
             "signal_count": self.signal_count,
             "category": self.category,

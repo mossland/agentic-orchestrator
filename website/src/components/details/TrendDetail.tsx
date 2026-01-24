@@ -18,10 +18,16 @@ interface TrendWithSignals extends ApiTrend {
 }
 
 export function TrendDetail({ data }: TrendDetailProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [trend, setTrend] = useState<TrendWithSignals | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Helper to get localized content
+  const getLocalizedText = (en: string | null | undefined, ko: string | null | undefined): string => {
+    if (locale === 'ko' && ko) return ko;
+    return en || '';
+  };
 
   useEffect(() => {
     async function fetchTrend() {
@@ -96,8 +102,13 @@ export function TrendDetail({ data }: TrendDetailProps) {
             {trend.category || 'tech'}
           </TerminalBadge>
           <TerminalBadge variant="cyan">{trend.period}</TerminalBadge>
+          {locale === 'ko' && trend.name_ko && (
+            <TerminalBadge variant="green">{t('detail.translatedContent')}</TerminalBadge>
+          )}
         </div>
-        <h3 className="text-lg font-bold text-[#c0c0c0]">{trend.name}</h3>
+        <h3 className="text-lg font-bold text-[#c0c0c0]">
+          {getLocalizedText(trend.name, trend.name_ko)}
+        </h3>
       </div>
 
       {/* Stats */}
@@ -117,10 +128,12 @@ export function TrendDetail({ data }: TrendDetailProps) {
       </div>
 
       {/* Description */}
-      {trend.description && (
+      {(trend.description || trend.description_ko) && (
         <div className="card-cli p-4">
           <div className="text-xs text-[#6b7280] uppercase mb-2">{t('detail.description')}</div>
-          <p className="text-sm text-[#c0c0c0] leading-relaxed">{trend.description}</p>
+          <p className="text-sm text-[#c0c0c0] leading-relaxed">
+            {getLocalizedText(trend.description, trend.description_ko)}
+          </p>
         </div>
       )}
 
@@ -224,7 +237,9 @@ export function TrendDetail({ data }: TrendDetailProps) {
                 className="flex items-center gap-2 p-2 bg-black/20 rounded"
               >
                 <span className="text-[#00ffff]">→</span>
-                <span className="text-sm text-[#c0c0c0] flex-1 truncate">{signal.title}</span>
+                <span className="text-sm text-[#c0c0c0] flex-1 truncate">
+                  {getLocalizedText(signal.title, signal.title_ko)}
+                </span>
                 <span className="text-xs text-[#bd93f9]">{signal.score.toFixed(1)}</span>
               </motion.div>
             ))}

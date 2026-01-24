@@ -57,7 +57,9 @@ export interface ApiSignal {
   source: string;
   category: string;
   title: string;
+  title_ko: string | null;
   summary: string | null;
+  summary_ko: string | null;
   url: string | null;
   score: number;
   sentiment: string | null;
@@ -78,7 +80,9 @@ export interface ApiTrend {
   id: string;
   period: string;
   name: string;
+  name_ko: string | null;
   description: string | null;
+  description_ko: string | null;
   score: number;
   signal_count: number;
   category: string | null;

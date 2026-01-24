@@ -3,6 +3,7 @@ Signal aggregator for collecting and processing signals from all adapters.
 """
 
 import asyncio
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 import hashlib
@@ -17,6 +18,8 @@ from ..db.connection import db
 from ..db.models import Signal
 from ..db.repositories import SignalRepository
 from .scorer import SignalScorer
+
+logger = logging.getLogger(__name__)
 
 
 class SignalAggregator:
@@ -135,8 +138,38 @@ class SignalAggregator:
 
         return list(seen.values())
 
+    async def _translate_to_korean(self, text: str) -> Optional[str]:
+        """Translate text to Korean using Claude API."""
+        if not text or len(text.strip()) < 5:
+            return None
+
+        try:
+            from ..llm.router import HybridLLMRouter
+
+            router = HybridLLMRouter()
+            prompt = f"""Translate the following English text to Korean.
+Keep the translation natural and concise. Only return the Korean translation, nothing else.
+
+Text: {text}
+
+Korean translation:"""
+
+            response = await router.route_request(
+                prompt=prompt,
+                prefer_claude=True,  # Use Claude for better translation quality
+                max_tokens=500,
+            )
+
+            if response and response.content:
+                return response.content.strip()
+
+        except Exception as e:
+            logger.warning(f"Translation failed: {e}")
+
+        return None
+
     async def _save_to_db(self, signals: List[SignalData]) -> int:
-        """Save signals to database."""
+        """Save signals to database with Korean translations."""
         saved_count = 0
 
         with db.session() as session:
@@ -150,12 +183,18 @@ class SignalAggregator:
                     ).first()
 
                     if not existing:
+                        # Translate title and summary to Korean
+                        title_ko = await self._translate_to_korean(signal.title)
+                        summary_ko = await self._translate_to_korean(signal.summary) if signal.summary else None
+
                         repo.create({
                             "id": signal.id,
                             "source": signal.source,
                             "category": signal.category,
                             "title": signal.title,
+                            "title_ko": title_ko,
                             "summary": signal.summary,
+                            "summary_ko": summary_ko,
                             "url": signal.url,
                             "raw_data": signal.raw_data,
                             "score": getattr(signal, 'score', 0.0),
@@ -165,7 +204,7 @@ class SignalAggregator:
                         saved_count += 1
 
                 except Exception as e:
-                    print(f"Error saving signal: {e}")
+                    logger.error(f"Error saving signal: {e}")
 
         return saved_count
 

@@ -6,9 +6,32 @@ import type { ActivityItem } from '@/lib/types';
 
 interface ActivityFeedProps {
   activities: ActivityItem[];
+  isLoading?: boolean;
 }
 
-export function ActivityFeed({ activities }: ActivityFeedProps) {
+// Skeleton item component
+function SkeletonItem({ index }: { index: number }) {
+  const widths = ['w-3/4', 'w-2/3', 'w-4/5', 'w-1/2', 'w-3/5'];
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: index * 0.05 }}
+      className="flex items-start gap-2 py-1 px-1 -mx-1"
+    >
+      {/* Timestamp skeleton */}
+      <div className="shrink-0 w-[72px] h-4 bg-[#21262d] rounded animate-pulse" />
+
+      {/* Type indicator skeleton */}
+      <div className="shrink-0 w-14 h-4 bg-[#21262d] rounded animate-pulse" />
+
+      {/* Message skeleton */}
+      <div className={`h-4 bg-[#21262d] rounded animate-pulse ${widths[index % widths.length]}`} />
+    </motion.div>
+  );
+}
+
+export function ActivityFeed({ activities, isLoading = false }: ActivityFeedProps) {
   const { t } = useI18n();
 
   const typeStyles: Record<string, { color: string; prefix: string; icon: string }> = {
@@ -42,34 +65,44 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
 
       {/* Activity log */}
       <div className="h-64 overflow-y-auto text-xs space-y-0.5">
-        {activities.map((activity, index) => {
-          const style = typeStyles[activity.type] || typeStyles.system;
-          return (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.03 }}
-              className="flex items-start gap-2 py-1 hover:bg-[#21262d]/50 px-1 -mx-1 transition-colors"
-            >
-              {/* Timestamp */}
-              <span className="text-[#6b7280] shrink-0 tabular-nums">
-                [{activity.time}]
-              </span>
+        {isLoading ? (
+          // Skeleton loading state
+          <>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <SkeletonItem key={index} index={index} />
+            ))}
+          </>
+        ) : (
+          // Real data
+          activities.map((activity, index) => {
+            const style = typeStyles[activity.type] || typeStyles.system;
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: index * 0.03 }}
+                className="flex items-start gap-2 py-1 hover:bg-[#21262d]/50 px-1 -mx-1 transition-colors"
+              >
+                {/* Timestamp */}
+                <span className="text-[#6b7280] shrink-0 tabular-nums">
+                  [{activity.time}]
+                </span>
 
-              {/* Type indicator */}
-              <span className={`${style.color} shrink-0 w-14 flex items-center gap-1`}>
-                <span>{style.icon}</span>
-                <span className="uppercase text-[10px] tracking-wide">{style.prefix}</span>
-              </span>
+                {/* Type indicator */}
+                <span className={`${style.color} shrink-0 w-14 flex items-center gap-1`}>
+                  <span>{style.icon}</span>
+                  <span className="uppercase text-[10px] tracking-wide">{style.prefix}</span>
+                </span>
 
-              {/* Message */}
-              <span className="text-[#c0c0c0] flex-1">
-                {activity.message}
-              </span>
-            </motion.div>
-          );
-        })}
+                {/* Message */}
+                <span className="text-[#c0c0c0] flex-1">
+                  {activity.message}
+                </span>
+              </motion.div>
+            );
+          })
+        )}
 
         {/* Cursor */}
         <motion.div
@@ -85,7 +118,7 @@ export function ActivityFeed({ activities }: ActivityFeedProps) {
       {/* Footer */}
       <div className="mt-3 pt-2 border-t border-[#21262d] flex items-center justify-between text-[10px]">
         <span className="text-[#6b7280]">
-          Showing last {activities.length} events
+          {isLoading ? 'Loading events...' : `Showing last ${activities.length} events`}
         </span>
         <div className="flex items-center gap-3">
           {Object.entries(typeStyles).slice(0, 4).map(([key, style]) => (

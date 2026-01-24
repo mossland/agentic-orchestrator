@@ -9,7 +9,7 @@ import { Pipeline } from '@/components/Pipeline';
 import { ActivityFeed } from '@/components/ActivityFeed';
 import { TerminalWindow } from '@/components/TerminalWindow';
 import { AdapterDetailModal } from '@/components/AdapterDetailModal';
-import { rssCategories, aiProviders, mockStats, mockActivity, mockPipeline } from '@/data/mock';
+import { rssCategories, aiProviders, mockStats, mockPipeline } from '@/data/mock';
 import { fetchSystemStats, fetchActivity, fetchPipeline, fetchAdapters } from '@/lib/api';
 import type { SystemStats, ActivityItem, PipelineStage, AdapterInfo } from '@/lib/types';
 
@@ -25,10 +25,11 @@ const ASCII_LOGO = `
 export default function Dashboard() {
   const { t } = useI18n();
   const [stats, setStats] = useState<SystemStats>(mockStats);
-  const [activity, setActivity] = useState<ActivityItem[]>(mockActivity);
+  const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pipeline, setPipeline] = useState<PipelineStage[]>(mockPipeline);
   const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isActivityLoading, setIsActivityLoading] = useState(true);
   const [isAdapterModalOpen, setIsAdapterModalOpen] = useState(false);
   const [isAdaptersLoading, setIsAdaptersLoading] = useState(false);
 
@@ -47,6 +48,7 @@ export default function Dashboard() {
         console.error('Failed to load dashboard data:', error);
       } finally {
         setIsLoading(false);
+        setIsActivityLoading(false);
       }
     }
 
@@ -125,7 +127,7 @@ export default function Dashboard() {
             transition={{ delay: 0.4 }}
           >
             <TerminalWindow title="activity.log" showDots>
-              <ActivityFeed activities={activity} />
+              <ActivityFeed activities={activity} isLoading={isActivityLoading} />
             </TerminalWindow>
           </motion.div>
 

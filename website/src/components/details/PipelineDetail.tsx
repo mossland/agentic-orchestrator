@@ -69,6 +69,19 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
               total: response.data.total,
             });
           }
+        } else if (stageId === 'projects') {
+          const response = await ApiClient.getProjects({ limit: 5 });
+          if (response.data) {
+            setStageData({
+              items: response.data.projects.map((p: any) => ({
+                id: p.id,
+                title: p.name,
+                status: p.status,
+                created_at: p.created_at,
+              })),
+              total: response.data.total,
+            });
+          }
         } else if (stageId === 'dev') {
           // No data yet for dev stage
           setStageData({ items: [], total: 0 });
@@ -127,6 +140,7 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
         {stageId === 'trends' && 'Analyzed trends extracted from collected signals'}
         {stageId === 'ideas' && 'Ideas generated from trend analysis and debates'}
         {stageId === 'plans' && 'Detailed plans created through multi-stage debates'}
+        {stageId === 'projects' && 'Projects scaffolded from approved plans, ready for development'}
         {stageId === 'dev' && 'Projects in active development phase'}
       </div>
 
@@ -153,6 +167,8 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
                   router.push('/backlog');
                 } else if (stageId === 'plans') {
                   router.push('/backlog?tab=plans');
+                } else if (stageId === 'projects') {
+                  router.push('/projects');
                 }
               }}
             >
@@ -193,6 +209,7 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
             {stageId === 'trends' && '📈'}
             {stageId === 'ideas' && '💡'}
             {stageId === 'plans' && '📋'}
+            {stageId === 'projects' && '📦'}
             {stageId === 'dev' && '🚀'}
           </div>
           <div className="text-sm text-[#6b7280]">No items in this stage</div>
@@ -201,6 +218,7 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
             {stageId === 'trends' && 'Run trend analysis to identify patterns'}
             {stageId === 'ideas' && 'Run trend analysis to generate ideas'}
             {stageId === 'plans' && 'Ideas will become plans through debates'}
+            {stageId === 'projects' && 'Approved plans will be scaffolded into projects'}
             {stageId === 'dev' && 'Approved plans will move to development'}
           </div>
         </div>
@@ -233,6 +251,8 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
               router.push('/trends');
             } else if (stageId === 'ideas' || stageId === 'plans') {
               router.push('/backlog');
+            } else if (stageId === 'projects') {
+              router.push('/projects');
             } else if (stageId === 'dev') {
               router.push('/backlog?tab=in-dev');
             }

@@ -7,10 +7,12 @@ import { SystemStatus } from '@/components/SystemStatus';
 import { StatsGrid } from '@/components/Stats';
 import { Pipeline } from '@/components/Pipeline';
 import { ActivityFeed } from '@/components/ActivityFeed';
-import { TerminalWindow } from '@/components/TerminalWindow';
+import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
 import { AdapterDetailModal } from '@/components/AdapterDetailModal';
+import { useModal } from '@/components/modals/useModal';
 import { rssCategories, aiProviders, mockStats, mockPipeline } from '@/data/mock';
-import { fetchSystemStats, fetchActivity, fetchPipeline, fetchAdapters } from '@/lib/api';
+import { fetchSystemStats, fetchActivity, fetchPipeline, fetchAdapters, ApiClient, type ApiProject } from '@/lib/api';
+import { formatLocalDateTime } from '@/lib/date';
 import type { SystemStats, ActivityItem, PipelineStage, AdapterInfo } from '@/lib/types';
 
 const ASCII_LOGO = `
@@ -23,11 +25,13 @@ const ASCII_LOGO = `
 `;
 
 export default function Dashboard() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
+  const { openModal } = useModal();
   const [stats, setStats] = useState<SystemStats>(mockStats);
   const [activity, setActivity] = useState<ActivityItem[]>([]);
   const [pipeline, setPipeline] = useState<PipelineStage[]>(mockPipeline);
   const [adapters, setAdapters] = useState<AdapterInfo[]>([]);
+  const [projects, setProjects] = useState<ApiProject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isActivityLoading, setIsActivityLoading] = useState(true);
   const [isAdapterModalOpen, setIsAdapterModalOpen] = useState(false);
@@ -36,14 +40,18 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [statsData, activityData, pipelineData] = await Promise.all([
+        const [statsData, activityData, pipelineData, projectsRes] = await Promise.all([
           fetchSystemStats(),
           fetchActivity(),
           fetchPipeline(),
+          ApiClient.getProjects({ limit: 5 }),
         ]);
         setStats(statsData);
         setActivity(activityData);
         setPipeline(pipelineData);
+        if (projectsRes.data) {
+          setProjects(projectsRes.data.projects);
+        }
       } catch (error) {
         console.error('Failed to load dashboard data:', error);
       } finally {
@@ -123,6 +131,85 @@ export default function Dashboard() {
         >
           <Pipeline stages={pipeline} />
         </motion.div>
+
+        {/* Recent Projects */}
+        {projects.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            className="mb-6"
+          >
+            <TerminalWindow title="recent_projects">
+              <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                {projects.slice(0, 3).map((project) => {
+                  const getStatusColor = (status: string): 'green' | 'cyan' | 'orange' | 'purple' => {
+                    switch (status) {
+                      case 'ready': return 'green';
+                      case 'generating': return 'cyan';
+                      case 'error': return 'orange';
+                      default: return 'purple';
+                    }
+                  };
+                  return (
+                    <motion.div
+                      key={project.id}
+                      onClick={() => openModal('project', { id: project.id, title: project.name })}
+                      className="p-3 rounded border border-[#21262d] hover:border-[#39ff14] cursor-pointer transition-colors bg-black/20"
+                      whileHover={{ scale: 1.02 }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <TerminalBadge variant={getStatusColor(project.status)}>
+                          {project.status.toUpperCase()}
+                        </TerminalBadge>
+                        {project.files_generated > 0 && (
+                          <span className="text-[10px] text-[#39ff14]">
+                            {project.files_generated} files
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm text-[#c0c0c0] truncate mb-1">
+                        {project.name}
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {project.tech_stack?.frontend && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-[#00ffff]/10 text-[#00ffff] rounded">
+                            {project.tech_stack.frontend}
+                          </span>
+                        )}
+                        {project.tech_stack?.backend && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-[#bd93f9]/10 text-[#bd93f9] rounded">
+                            {project.tech_stack.backend}
+                          </span>
+                        )}
+                        {project.tech_stack?.blockchain && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-[#ff6b35]/10 text-[#ff6b35] rounded">
+                            {project.tech_stack.blockchain}
+                          </span>
+                        )}
+                      </div>
+                      {project.created_at && (
+                        <div className="text-[10px] text-[#6b7280] mt-2">
+                          {formatLocalDateTime(project.created_at, locale)}
+                        </div>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
+              {projects.length > 3 && (
+                <div className="mt-3 pt-3 border-t border-[#21262d] text-center">
+                  <a
+                    href="/projects"
+                    className="text-xs text-[#00ffff] hover:text-[#39ff14] transition-colors"
+                  >
+                    {locale === 'ko' ? '모든 프로젝트 보기' : 'View all projects'} →
+                  </a>
+                </div>
+              )}
+            </TerminalWindow>
+          </motion.div>
+        )}
 
         {/* Two Column Layout */}
         <div className="grid gap-6 lg:grid-cols-2">

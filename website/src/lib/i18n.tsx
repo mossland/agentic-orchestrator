@@ -415,6 +415,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'ideas.tab.trends': 'Trends',
     'ideas.tab.ideas': 'Ideas',
     'ideas.tab.plans': 'Plans',
+    'ideas.tab.projects': 'Projects',
     'ideas.stage.signals': 'Signals',
     'ideas.stage.trends': 'Trends',
     'ideas.stage.ideas': 'Ideas',
@@ -426,6 +427,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'ideas.noTrends': 'No trends yet',
     'ideas.noIdeas': 'No ideas yet',
     'ideas.noPlans': 'No plans yet',
+    'ideas.noProjects': 'No projects yet',
     'ideas.signals': 'signals',
 
     // Debates Page
@@ -924,6 +926,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'ideas.tab.trends': '트렌드',
     'ideas.tab.ideas': '아이디어',
     'ideas.tab.plans': '플랜',
+    'ideas.tab.projects': '프로젝트',
     'ideas.stage.signals': '시그널',
     'ideas.stage.trends': '트렌드',
     'ideas.stage.ideas': '아이디어',
@@ -935,6 +938,7 @@ const translations: Record<Locale, Record<string, string>> = {
     'ideas.noTrends': '트렌드 없음',
     'ideas.noIdeas': '아이디어 없음',
     'ideas.noPlans': '플랜 없음',
+    'ideas.noProjects': '프로젝트 없음',
     'ideas.signals': '시그널',
 
     // Debates Page

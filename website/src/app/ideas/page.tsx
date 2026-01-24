@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
-import { ApiClient, type ApiTrend, type ApiIdea, type ApiPlan } from '@/lib/api';
+import { ApiClient, type ApiTrend, type ApiIdea, type ApiPlan, type ApiProject } from '@/lib/api';
 import { formatLocalDateTime } from '@/lib/date';
 import { useModal } from '@/components/modals/useModal';
 import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
@@ -68,7 +68,7 @@ function getIdeaSummaryText(content: string | null | undefined): string {
   }
 }
 
-type ViewMode = 'pipeline' | 'trends' | 'ideas' | 'plans';
+type ViewMode = 'pipeline' | 'trends' | 'ideas' | 'plans' | 'projects';
 
 // Skeleton components for loading states
 function PipelineSkeleton() {
@@ -168,6 +168,7 @@ export default function IdeasPage() {
   const [trends, setTrends] = useState<ApiTrend[]>([]);
   const [ideas, setIdeas] = useState<ApiIdea[]>([]);
   const [plans, setPlans] = useState<ApiPlan[]>([]);
+  const [projects, setProjects] = useState<ApiProject[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Helper function for localized text display
@@ -179,15 +180,17 @@ export default function IdeasPage() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      const [trendsRes, ideasRes, plansRes] = await Promise.all([
+      const [trendsRes, ideasRes, plansRes, projectsRes] = await Promise.all([
         ApiClient.getTrends({ limit: 20 }),
         ApiClient.getIdeas({ limit: 50 }),
         ApiClient.getPlans({ limit: 50 }),
+        ApiClient.getProjects({ limit: 50 }),
       ]);
 
       if (trendsRes.data) setTrends(trendsRes.data.trends);
       if (ideasRes.data) setIdeas(ideasRes.data.ideas);
       if (plansRes.data) setPlans(plansRes.data.plans);
+      if (projectsRes.data) setProjects(projectsRes.data.projects);
       setLoading(false);
     }
 
@@ -199,6 +202,7 @@ export default function IdeasPage() {
     { id: 'trends' as const, labelKey: 'ideas.tab.trends', count: trends.length },
     { id: 'ideas' as const, labelKey: 'ideas.tab.ideas', count: ideas.length },
     { id: 'plans' as const, labelKey: 'ideas.tab.plans', count: plans.length },
+    { id: 'projects' as const, labelKey: 'ideas.tab.projects', count: projects.length },
   ];
 
   const statusColors: Record<string, string> = {
@@ -268,6 +272,11 @@ export default function IdeasPage() {
             )}
             {viewMode === 'plans' && (
               <TerminalWindow title="PLANS">
+                <ListSkeleton count={6} />
+              </TerminalWindow>
+            )}
+            {viewMode === 'projects' && (
+              <TerminalWindow title="PROJECTS">
                 <ListSkeleton count={6} />
               </TerminalWindow>
             )}
@@ -569,6 +578,76 @@ export default function IdeasPage() {
                   ))}
                   {plans.length === 0 && (
                     <div className="text-center py-12 text-[#6b7280]">{t('ideas.noPlans')}</div>
+                  )}
+                </div>
+              </TerminalWindow>
+            )}
+
+            {/* Projects View */}
+            {viewMode === 'projects' && (
+              <TerminalWindow title={`PROJECTS (${projects.length})`}>
+                <div className="space-y-3">
+                  {projects.map((project, idx) => {
+                    const getStatusColor = (status: string): 'green' | 'cyan' | 'orange' | 'purple' => {
+                      switch (status) {
+                        case 'ready': return 'green';
+                        case 'generating': return 'cyan';
+                        case 'error': return 'orange';
+                        default: return 'purple';
+                      }
+                    };
+                    return (
+                      <motion.div
+                        key={project.id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: idx * 0.02 }}
+                        onClick={() => openModal('project', { id: project.id, title: project.name })}
+                        className="p-4 rounded border border-[#21262d] hover:border-[#39ff14] cursor-pointer transition-colors bg-black/20"
+                      >
+                        <div className="flex items-start gap-4">
+                          <div className="text-center w-16">
+                            <div className={`text-xl font-bold ${project.status === 'ready' ? 'text-[#39ff14]' : project.status === 'generating' ? 'text-[#00ffff]' : 'text-[#ff5555]'}`}>
+                              {project.files_generated > 0 ? project.files_generated : '-'}
+                            </div>
+                            <div className="text-[10px] text-[#6b7280]">
+                              {project.files_generated > 0 ? (locale === 'ko' ? '파일' : 'files') : ''}
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <TerminalBadge variant={getStatusColor(project.status)}>
+                                {project.status.toUpperCase()}
+                              </TerminalBadge>
+                              {project.tech_stack?.frontend && (
+                                <TerminalBadge variant="cyan">{project.tech_stack.frontend}</TerminalBadge>
+                              )}
+                              {project.tech_stack?.backend && (
+                                <TerminalBadge variant="purple">{project.tech_stack.backend}</TerminalBadge>
+                              )}
+                              {project.tech_stack?.blockchain && (
+                                <TerminalBadge variant="orange">{project.tech_stack.blockchain}</TerminalBadge>
+                              )}
+                            </div>
+                            <h3 className="text-sm font-medium text-[#c0c0c0]">{project.name}</h3>
+                            {project.directory_path && (
+                              <div className="text-[10px] text-[#6b7280] mt-1 font-mono truncate">
+                                <span className="text-[#00ffff]">→</span> {project.directory_path}
+                              </div>
+                            )}
+                            {project.created_at && (
+                              <div className="text-[10px] text-[#6b7280] mt-1">
+                                {formatLocalDateTime(project.created_at, locale)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-[#21262d]">→</div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                  {projects.length === 0 && (
+                    <div className="text-center py-12 text-[#6b7280]">{t('ideas.noProjects')}</div>
                   )}
                 </div>
               </TerminalWindow>

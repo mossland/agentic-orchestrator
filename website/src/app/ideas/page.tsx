@@ -16,19 +16,27 @@ function getIdeaSummaryText(content: string | null | undefined): string {
   if (!content) return '';
 
   try {
-    // Remove markdown code block if present
+    // Remove markdown code block if present (handle various formats)
     let jsonStr = content.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.slice(7);
-    }
-    if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.slice(3);
-    }
-    if (jsonStr.endsWith('```')) {
-      jsonStr = jsonStr.slice(0, -3);
-    }
-    jsonStr = jsonStr.trim();
 
+    // Handle ```json\n...\n``` format
+    const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+    if (codeBlockMatch) {
+      jsonStr = codeBlockMatch[1].trim();
+    } else {
+      // Simple removal for edge cases
+      if (jsonStr.startsWith('```json')) {
+        jsonStr = jsonStr.slice(7);
+      } else if (jsonStr.startsWith('```')) {
+        jsonStr = jsonStr.slice(3);
+      }
+      if (jsonStr.endsWith('```')) {
+        jsonStr = jsonStr.slice(0, -3);
+      }
+      jsonStr = jsonStr.trim();
+    }
+
+    // Try to parse as JSON
     const parsed = JSON.parse(jsonStr);
 
     // Try to extract readable text in order of preference
@@ -46,8 +54,17 @@ function getIdeaSummaryText(content: string | null | undefined): string {
 
     return content; // Fallback to original
   } catch {
-    // Not JSON, return as is
-    return content;
+    // Not valid JSON - check if it looks like JSON and extract readable parts
+    if (content.includes('"core_analysis"')) {
+      const match = content.match(/"core_analysis"\s*:\s*"([^"]+)"/);
+      if (match) return match[1];
+    }
+    if (content.includes('"idea_title"')) {
+      const match = content.match(/"idea_title"\s*:\s*"([^"]+)"/);
+      if (match) return match[1];
+    }
+    // Return content without JSON artifacts
+    return content.replace(/```json/g, '').replace(/```/g, '').replace(/[{}"]/g, '').trim().slice(0, 200);
   }
 }
 

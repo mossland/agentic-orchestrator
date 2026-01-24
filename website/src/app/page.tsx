@@ -60,13 +60,18 @@ export default function Dashboard() {
   }, []);
 
   // Load adapters when modal opens
-  const handleOpenAdapterModal = () => {
+  const handleOpenAdapterModal = async () => {
+    setIsAdaptersLoading(true);
     setIsAdapterModalOpen(true);
-    if (adapters.length === 0) {
-      setIsAdaptersLoading(true);
-      fetchAdapters()
-        .then(setAdapters)
-        .finally(() => setIsAdaptersLoading(false));
+
+    try {
+      // Always fetch fresh data when opening modal
+      const adapterData = await fetchAdapters();
+      setAdapters(adapterData);
+    } catch (error) {
+      console.error('Failed to fetch adapters:', error);
+    } finally {
+      setIsAdaptersLoading(false);
     }
   };
 
@@ -84,7 +89,7 @@ export default function Dashboard() {
           </pre>
           <div className="text-center mt-2">
             <span className="text-[#6b7280] text-xs">
-              Multi-Agent AI Orchestration System v0.4.0
+              Multi-Agent AI Orchestration System v0.5.1
             </span>
           </div>
         </motion.div>

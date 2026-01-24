@@ -21,6 +21,20 @@ export function AdapterDetailModal({
   const { locale } = useI18n();
   const [selectedAdapter, setSelectedAdapter] = useState<AdapterInfo | null>(null);
 
+  // Auto-select first adapter when adapters load
+  useEffect(() => {
+    if (adapters.length > 0 && !selectedAdapter) {
+      setSelectedAdapter(adapters[0]);
+    }
+  }, [adapters, selectedAdapter]);
+
+  // Reset selection when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedAdapter(null);
+    }
+  }, [isOpen]);
+
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {

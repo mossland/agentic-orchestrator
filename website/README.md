@@ -2,7 +2,7 @@
 
 CLI-style retro terminal dashboard for the Mossland Agentic Orchestrator.
 
-**Version**: v0.4.0 "Signal Storm"
+**Version**: v0.5.1 "Bilingual"
 
 ## Features
 

@@ -7,7 +7,7 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.5.1] - 2026-01-24
+## [0.5.1] "Bilingual" - 2026-01-24
 
 ### Added
 
@@ -23,15 +23,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Plans list, detail modal
   - Trends list, detail modal
 - **Migration Script**: `migrate_bilingual.py` to backfill existing data with translations
+- **IdeaContent Component**: Structured JSON idea display with sections:
+  - Core Analysis with colored borders
+  - Opportunity/Risk grid with visual indicators
+  - Proposal with feature lists and tech stack badges
+  - Roadmap timeline
+  - KPIs with target metrics
 
 ### Fixed
 - **TrendHeatmap Size**: Reduced cell height from `aspect-square` to `h-6` for better fit
+- **AdapterDetailModal**: Fixed empty modal on first open - now auto-selects first adapter
+- **Trend Analysis**: Changed LLM prompt to generate English-only content (Korean via translation)
+- **Pipeline Modal**: Fixed VIEW ALL button for signals and trends stages
 
 ### Technical
 - Added `ContentTranslator` class with `ensure_bilingual()`, `translate_to_english()`, `translate_to_korean()` methods
 - Added `_detect_language()` helper for Korean/English detection
 - Updated `_auto_score_and_save_ideas()` to use bilingual translation
 - Added `getLocalizedText()` helper to frontend components
+- Added `IdeaContent.tsx` component for structured JSON parsing and display
+- Disabled signal translation for performance (signals are English-only)
 
 ---
 

@@ -7,7 +7,7 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
-## [0.5.1] - 2026-01-24
+## [0.5.1] "Bilingual" - 2026-01-24
 
 ### 추가됨
 
@@ -23,15 +23,26 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
   - 플랜 목록, 상세 모달
   - 트렌드 목록, 상세 모달
 - **마이그레이션 스크립트**: 기존 데이터를 번역으로 채우는 `migrate_bilingual.py`
+- **IdeaContent 컴포넌트**: 구조화된 JSON 아이디어 표시:
+  - 색상 테두리가 있는 핵심 분석
+  - 시각적 인디케이터가 있는 기회/리스크 그리드
+  - 기능 목록과 기술 스택 배지가 있는 제안
+  - 로드맵 타임라인
+  - 목표 지표가 있는 KPI
 
 ### 수정됨
 - **TrendHeatmap 크기**: 셀 높이를 `aspect-square`에서 `h-6`으로 축소
+- **AdapterDetailModal**: 첫 오픈 시 빈 모달 수정 - 첫 번째 어댑터 자동 선택
+- **트렌드 분석**: LLM 프롬프트를 영어 전용으로 변경 (한글은 번역으로 제공)
+- **파이프라인 모달**: signals 및 trends 스테이지의 VIEW ALL 버튼 수정
 
 ### 기술 사항
 - `ContentTranslator` 클래스 추가: `ensure_bilingual()`, `translate_to_english()`, `translate_to_korean()` 메서드
 - 한글/영어 감지를 위한 `_detect_language()` 헬퍼 추가
 - `_auto_score_and_save_ideas()`를 양방향 번역 사용하도록 업데이트
 - 프론트엔드 컴포넌트에 `getLocalizedText()` 헬퍼 추가
+- 구조화된 JSON 파싱 및 표시를 위한 `IdeaContent.tsx` 컴포넌트 추가
+- 성능을 위해 시그널 번역 비활성화 (시그널은 영어 전용)
 
 ---
 

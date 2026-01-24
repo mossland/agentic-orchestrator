@@ -24,7 +24,33 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
     async function fetchData() {
       try {
         // Fetch data based on stage type
-        if (stageId === 'ideas') {
+        if (stageId === 'signals') {
+          const response = await ApiClient.getSignals({ limit: 5 });
+          if (response.data) {
+            setStageData({
+              items: response.data.signals.map((s: any) => ({
+                id: s.id,
+                title: s.title,
+                status: s.source,
+                created_at: s.collected_at,
+              })),
+              total: response.data.total,
+            });
+          }
+        } else if (stageId === 'trends') {
+          const response = await ApiClient.getTrends();
+          if (response.data) {
+            setStageData({
+              items: response.data.trends.slice(0, 5).map((t: any) => ({
+                id: t.id,
+                title: t.name,
+                status: t.period,
+                created_at: t.analyzed_at,
+              })),
+              total: response.data.trends.length,
+            });
+          }
+        } else if (stageId === 'ideas') {
           const response = await ApiClient.getIdeas({ limit: 5 });
           if (response.data) {
             setStageData({
@@ -95,6 +121,8 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
       {/* Stage Description */}
       <div className="text-xs text-[#6b7280]">
         <span className="text-[#bd93f9]"># </span>
+        {stageId === 'signals' && 'Raw signals collected from various sources (RSS, GitHub, OnChain, etc.)'}
+        {stageId === 'trends' && 'Analyzed trends extracted from collected signals'}
         {stageId === 'ideas' && 'Ideas generated from trend analysis and debates'}
         {stageId === 'plans' && 'Detailed plans created through multi-stage debates'}
         {stageId === 'dev' && 'Projects in active development phase'}
@@ -115,7 +143,11 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
               className="p-3 bg-[#0d1117] rounded border border-[#21262d] hover:border-[#39ff14]/50 transition-colors cursor-pointer"
               onClick={() => {
                 // Navigate to the appropriate page
-                if (stageId === 'ideas') {
+                if (stageId === 'signals') {
+                  router.push('/transparency/signals');
+                } else if (stageId === 'trends') {
+                  router.push('/trends');
+                } else if (stageId === 'ideas') {
                   router.push('/backlog');
                 } else if (stageId === 'plans') {
                   router.push('/backlog?tab=plans');
@@ -155,12 +187,16 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
       {stageData?.items?.length === 0 && (
         <div className="text-center py-6">
           <div className="text-4xl mb-3">
+            {stageId === 'signals' && '📡'}
+            {stageId === 'trends' && '📈'}
             {stageId === 'ideas' && '💡'}
             {stageId === 'plans' && '📋'}
             {stageId === 'dev' && '🚀'}
           </div>
           <div className="text-sm text-[#6b7280]">No items in this stage</div>
           <div className="text-[10px] text-[#3b3b3b] mt-1">
+            {stageId === 'signals' && 'Run signal collection to gather data'}
+            {stageId === 'trends' && 'Run trend analysis to identify patterns'}
             {stageId === 'ideas' && 'Run trend analysis to generate ideas'}
             {stageId === 'plans' && 'Ideas will become plans through debates'}
             {stageId === 'dev' && 'Approved plans will move to development'}
@@ -189,7 +225,11 @@ export function PipelineDetail({ data }: PipelineDetailProps) {
       <div className="text-center pt-2">
         <button
           onClick={() => {
-            if (stageId === 'ideas' || stageId === 'plans') {
+            if (stageId === 'signals') {
+              router.push('/transparency/signals');
+            } else if (stageId === 'trends') {
+              router.push('/trends');
+            } else if (stageId === 'ideas' || stageId === 'plans') {
               router.push('/backlog');
             } else if (stageId === 'dev') {
               router.push('/backlog?tab=in-dev');

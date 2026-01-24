@@ -12,11 +12,11 @@ export function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navItems = [
-    { href: '/', label: 'Dashboard', icon: '⌂' },
-    { href: '/ideas', label: 'Ideas', icon: '💡' },
-    { href: '/debates', label: 'Debates', icon: '💬' },
-    { href: '/agents', label: 'Agents', icon: '🤖' },
-    { href: '/system', label: 'System', icon: '⚙' },
+    { href: '/', labelKey: 'nav.dashboard', icon: '⌂' },
+    { href: '/ideas', labelKey: 'nav.ideas', icon: '💡' },
+    { href: '/debates', labelKey: 'nav.debates', icon: '💬' },
+    { href: '/agents', labelKey: 'nav.agents', icon: '🤖' },
+    { href: '/system', labelKey: 'nav.system', icon: '⚙' },
   ];
 
   return (
@@ -30,7 +30,7 @@ export function Navigation() {
           <span className="text-[#6b7280]">::</span>
           <span className="text-[#00ffff] text-sm">AO</span>
           <span className="hidden sm:inline-block text-[#6b7280] text-xs ml-2">
-            v0.4.0
+            v0.5.1
           </span>
         </Link>
 
@@ -51,7 +51,7 @@ export function Navigation() {
                 `}
               >
                 <span className="text-sm">{item.icon}</span>
-                {item.label}
+                {t(item.labelKey)}
                 {isActive && (
                   <motion.span
                     layoutId="cursor"
@@ -130,7 +130,7 @@ export function Navigation() {
                   `}
                 >
                   <span className="text-sm">{item.icon}</span>
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               );
             })}

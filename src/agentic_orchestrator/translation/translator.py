@@ -123,6 +123,12 @@ English translation:"""
             if translated.lower().startswith("english translation:"):
                 translated = translated[len("English translation:"):].strip()
 
+            # Remove markdown separator markers that the model might add
+            if translated.startswith("---"):
+                translated = translated[3:].strip()
+            if translated.endswith("---"):
+                translated = translated[:-3].strip()
+
             logger.info(
                 f"Translated KO→EN ({len(text)} chars -> {len(translated)} chars) "
                 f"using {response.model}"
@@ -176,6 +182,12 @@ Korean translation:"""
             # Remove any wrapper text the model might add
             if translated.startswith("Korean translation:"):
                 translated = translated[len("Korean translation:"):].strip()
+
+            # Remove markdown separator markers that the model might add
+            if translated.startswith("---"):
+                translated = translated[3:].strip()
+            if translated.endswith("---"):
+                translated = translated[:-3].strip()
 
             logger.info(
                 f"Translated EN→KO ({len(text)} chars -> {len(translated)} chars) "

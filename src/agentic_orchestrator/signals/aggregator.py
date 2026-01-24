@@ -321,38 +321,45 @@ class SignalAggregator:
 
         return final_signals
 
-    async def _translate_to_korean(self, text: str) -> Optional[str]:
-        """Translate text to Korean using Claude API."""
+    async def _ensure_bilingual(self, text: str) -> tuple[str, Optional[str]]:
+        """
+        Ensure text is available in both English and Korean.
+
+        Uses ContentTranslator for bidirectional translation:
+        - Korean text -> translates to English, keeps Korean
+        - English text -> keeps English, translates to Korean
+
+        Returns:
+            Tuple of (english_text, korean_text)
+        """
         if not text or len(text.strip()) < 5:
-            return None
+            return (text or "", None)
 
         try:
-            from ..llm.router import HybridLLMRouter
+            from ..translation.translator import ContentTranslator
 
-            router = HybridLLMRouter()
-            prompt = f"""Translate the following English text to Korean.
-Keep the translation natural and concise. Only return the Korean translation, nothing else.
-
-Text: {text}
-
-Korean translation:"""
-
-            response = await router.route_request(
-                prompt=prompt,
-                prefer_claude=True,  # Use Claude for better translation quality
-                max_tokens=500,
-            )
-
-            if response and response.content:
-                return response.content.strip()
+            translator = ContentTranslator()
+            english_text, korean_text = await translator.ensure_bilingual(text)
+            return (english_text or text, korean_text)
 
         except Exception as e:
             logger.warning(f"Translation failed: {e}")
 
-        return None
+        return (text, None)
 
-    async def _save_to_db(self, signals: List[SignalData]) -> int:
-        """Save signals to database with Korean translations."""
+    async def _save_to_db(self, signals: List[SignalData], translate: bool = False) -> int:
+        """
+        Save signals to database.
+
+        Args:
+            signals: List of signals to save
+            translate: Whether to translate signals (default: False for performance)
+                       Translation is time-consuming (~15s per field), so it's disabled
+                       by default. Translations are more useful for trends/ideas/plans.
+
+        Returns:
+            Number of signals saved
+        """
         saved_count = 0
 
         with db.session() as session:
@@ -366,9 +373,17 @@ Korean translation:"""
                     ).first()
 
                     if not existing:
-                        # Translate title and summary to Korean
-                        title_ko = await self._translate_to_korean(signal.title)
-                        summary_ko = await self._translate_to_korean(signal.summary) if signal.summary else None
+                        title_ko = None
+                        summary_ko = None
+
+                        # Optional translation (disabled by default for performance)
+                        if translate:
+                            try:
+                                title_en, title_ko = await self._ensure_bilingual(signal.title)
+                                if signal.summary:
+                                    _, summary_ko = await self._ensure_bilingual(signal.summary)
+                            except Exception as e:
+                                logger.warning(f"Translation failed for signal: {e}")
 
                         repo.create({
                             "id": signal.id,

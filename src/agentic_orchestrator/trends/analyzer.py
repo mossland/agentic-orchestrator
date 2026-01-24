@@ -220,42 +220,44 @@ Prioritize trends with:
 ## Instructions
 Identify the most significant trends from these headlines. For each trend:
 
-### 제목 요구사항 (IMPORTANT)
-- **구체적이고 설명적인 제목을 작성하세요 (최소 30자 이상)**
-- 일반적인 표현 대신 구체적인 기술명, 프로젝트명, 수치를 포함하세요
-- 나쁜 예: "AI 트렌드", "DeFi 성장", "NFT 뉴스"
-- 좋은 예: "OpenAI의 GPT-5 출시로 에이전트 자동화 혁신 가속화", "Uniswap v4 훅스 도입으로 맞춤형 DEX 전략 가능"
+### Title Requirements (IMPORTANT)
+- **Write specific and descriptive titles (minimum 30 characters)**
+- Include specific technology names, project names, and numbers instead of generic expressions
+- Bad examples: "AI Trend", "DeFi Growth", "NFT News"
+- Good examples: "OpenAI GPT-5 Agent SDK Launch Accelerates Autonomous AI Workflow Automation", "Uniswap v4 Hooks Enable Custom DEX Strategies"
 
-### 내용 요구사항
-- summary는 최소 200자 이상으로 트렌드의 배경, 현황, 영향을 상세히 설명
-- web3_relevance는 구체적인 적용 시나리오와 예상 효과를 포함
-- idea_seeds는 각각 구현 가능한 프로젝트 아이디어로 상세하게 기술
+### Content Requirements
+- summary should be at least 200 characters, explaining the background, current status, and impact of the trend in detail
+- web3_relevance should include specific application scenarios and expected effects
+- idea_seeds should each describe implementable project ideas in detail
+
+**IMPORTANT: All content MUST be written in English only.**
 
 Respond with a JSON object in this exact format:
 ```json
 {{
   "trends": [
     {{
-      "topic": "OpenAI GPT-5 에이전트 SDK 출시로 자율 AI 워크플로우 자동화 시대 개막",
+      "topic": "OpenAI GPT-5 Agent SDK Launch Marks the Beginning of Autonomous AI Workflow Automation Era",
       "keywords": ["GPT-5", "AI Agent", "autonomous workflow", "LLM orchestration", "tool use"],
-      "summary": "OpenAI가 GPT-5와 함께 Agent SDK를 정식 출시하면서 AI 에이전트 개발이 본격화되고 있다. 이번 SDK는 도구 사용, 메모리 관리, 멀티스텝 추론을 네이티브로 지원하며, 기업들은 이를 활용해 복잡한 비즈니스 프로세스를 자동화하기 시작했다. 특히 금융, 의료, 법률 분야에서 에이전트 도입이 가속화되고 있으며, 개발자 커뮤니티에서는 다양한 오픈소스 프레임워크가 등장하고 있다.",
+      "summary": "OpenAI has officially released the Agent SDK alongside GPT-5, marking the full-scale adoption of AI agent development. This SDK natively supports tool use, memory management, and multi-step reasoning. Enterprises have begun automating complex business processes using these capabilities. Agent adoption is accelerating particularly in finance, healthcare, and legal sectors, while the developer community is producing various open-source frameworks.",
       "category": "ai",
       "score": 9.2,
       "article_count": 15,
       "sources": ["TechCrunch", "Hacker News", "OpenAI Blog"],
       "sample_headlines": ["OpenAI Releases Agent SDK with Native Tool Use", "GPT-5 Powers New Wave of Autonomous Business Agents"],
-      "web3_relevance": "AI 에이전트는 DeFi 프로토콜의 자동 리밸런싱, DAO 제안서 분석 및 투표 자동화, 스마트 컨트랙트 보안 감사 자동화 등에 활용될 수 있다. 특히 온체인 데이터 분석과 결합하면 실시간 시장 대응 전략 구현이 가능하다.",
+      "web3_relevance": "AI agents can be used for automatic rebalancing of DeFi protocols, DAO proposal analysis and voting automation, and smart contract security audit automation. Combined with on-chain data analysis, real-time market response strategies become possible.",
       "idea_seeds": [
-        "DeFi 포트폴리오 자동 리밸런싱 에이전트 - 사용자의 리스크 성향에 맞춰 자동으로 포지션 조정",
-        "DAO 거버넌스 참여 에이전트 - 토큰 홀더를 대신해 제안서 분석 및 투표",
-        "스마트 컨트랙트 보안 감사 자동화 도구 - AI가 취약점 탐지 및 리포트 생성"
+        "DeFi Portfolio Auto-Rebalancing Agent - Automatically adjusts positions based on user risk preferences",
+        "DAO Governance Participation Agent - Analyzes proposals and votes on behalf of token holders",
+        "Smart Contract Security Audit Automation Tool - AI detects vulnerabilities and generates reports"
       ]
     }}
   ]
 }}
 ```
 
-Focus on actionable insights and Web3 opportunities. Be specific and detailed."""
+Focus on actionable insights and Web3 opportunities. Be specific and detailed. Write everything in English."""
 
     def _parse_trends_response(
         self,

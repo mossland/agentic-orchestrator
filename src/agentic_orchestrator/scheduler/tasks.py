@@ -97,32 +97,31 @@ def _apply_time_decay_to_signals(signals: List, now: datetime = None) -> List:
     return signals
 
 
-async def _translate_to_korean(router, text: str) -> Optional[str]:
-    """Translate English text to Korean using the LLM router."""
+async def _ensure_bilingual(text: str) -> tuple[str, Optional[str]]:
+    """
+    Ensure text is available in both English and Korean.
+
+    Uses ContentTranslator for bidirectional translation:
+    - Korean text -> translates to English, keeps Korean
+    - English text -> keeps English, translates to Korean
+
+    Returns:
+        Tuple of (english_text, korean_text)
+    """
     if not text or len(text.strip()) < 5:
-        return None
+        return (text or "", None)
 
     try:
-        prompt = f"""Translate the following English text to Korean.
-Keep the translation natural and concise. Only return the Korean translation, nothing else.
+        from ..translation.translator import ContentTranslator
 
-Text: {text}
-
-Korean translation:"""
-
-        response = await router.route_request(
-            prompt=prompt,
-            prefer_claude=True,  # Use Claude for better translation quality
-            max_tokens=500,
-        )
-
-        if response and response.content:
-            return response.content.strip()
+        translator = ContentTranslator()
+        english_text, korean_text = await translator.ensure_bilingual(text)
+        return (english_text or text, korean_text)
 
     except Exception as e:
         logger.warning(f"Translation failed for text: {text[:50]}... Error: {e}")
 
-    return None
+    return (text, None)
 
 
 async def _signal_collect_async():
@@ -234,20 +233,20 @@ async def _analyze_trends_async():
         logger.info("Analyzing 24h trends...")
         analysis = await analyzer.analyze_trends(feed_items, "24h", max_trends=10)
 
-        # Save trends to database with Korean translations
+        # Save trends to database with bilingual content
         saved_count = 0
         for trend in analysis.trends:
             try:
-                # Translate trend name and description to Korean
-                name_ko = await _translate_to_korean(router, trend.topic)
-                description_ko = await _translate_to_korean(router, trend.summary)
+                # Ensure bilingual content (English main field, Korean *_ko field)
+                name_en, name_ko = await _ensure_bilingual(trend.topic)
+                desc_en, description_ko = await _ensure_bilingual(trend.summary)
 
                 trend_repo.create({
                     'id': str(uuid.uuid4())[:8],
                     'period': trend.time_period,
-                    'name': trend.topic,
+                    'name': name_en or trend.topic,
                     'name_ko': name_ko,
-                    'description': trend.summary,
+                    'description': desc_en or trend.summary,
                     'description_ko': description_ko,
                     'score': trend.score,
                     'signal_count': trend.article_count,

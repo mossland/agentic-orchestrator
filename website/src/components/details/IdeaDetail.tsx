@@ -11,6 +11,7 @@ import { ScoreBreakdown } from '../visualization/ScoreBreakdown';
 import { AgentContribution } from '../visualization/AgentContribution';
 import { SignalLineage } from '../visualization/SignalLineage';
 import { TerminalBadge } from '../TerminalWindow';
+import { IdeaContent } from '../IdeaContent';
 
 interface IdeaDetailProps {
   data: ModalData;
@@ -147,10 +148,11 @@ export function IdeaDetail({ data }: IdeaDetailProps) {
         <div className="text-xs text-[#6b7280] uppercase mb-2">
           {idea.description ? t('detail.fullDescription') : t('detail.summary')}
         </div>
-        <div className="text-sm text-[#c0c0c0] leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
-          {idea.description
-            ? getLocalizedText(idea.description, idea.description_ko)
-            : getLocalizedText(idea.summary, idea.summary_ko)}
+        <div className="max-h-96 overflow-y-auto">
+          <IdeaContent
+            content={idea.description || idea.summary || ''}
+            contentKo={idea.description_ko || idea.summary_ko}
+          />
         </div>
       </div>
 

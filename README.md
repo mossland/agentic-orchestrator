@@ -4,7 +4,7 @@
 
 An autonomous multi-agent orchestration system for discovering, planning, and implementing micro Web3 services for the Mossland ecosystem.
 
-**Version**: v0.4.0 "Signal Storm"
+**Version**: v0.5.1 "Bilingual"
 
 ## Key Features
 
@@ -313,4 +313,4 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 *Built for the Mossland ecosystem - human-guided, AI-powered innovation.*
 
-*v0.4.0 "Signal Storm" - Multi-agent orchestration with diverse signal sources*
+*v0.5.1 "Bilingual" - Multi-agent orchestration with bilingual content support*

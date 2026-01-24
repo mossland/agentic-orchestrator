@@ -13,6 +13,8 @@ import type {
   Plan,
   PipelineStage,
   AdapterInfo,
+  GenerateProjectResponse,
+  ProjectJobStatus,
 } from './types';
 import {
   mockStats,
@@ -149,6 +151,31 @@ export interface ApiPlan {
   final_plan_ko: string | null;
   github_issue_url: string | null;
   created_at: string | null;
+}
+
+export interface ProjectsResponse {
+  projects: ApiProject[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ApiProject {
+  id: string;
+  plan_id: string;
+  name: string;
+  directory_path: string | null;
+  tech_stack: {
+    frontend?: string;
+    backend?: string;
+    database?: string;
+    blockchain?: string;
+    additional?: string[];
+  };
+  status: string;
+  files_generated: number;
+  created_at: string | null;
+  completed_at: string | null;
 }
 
 export interface DebatesResponse {
@@ -436,6 +463,46 @@ export class ApiClient {
       project_plan_content: string | null;
       updated_at: string | null;
     }>(`/plans/${planId}`);
+  }
+
+  static async getPlanProject(planId: string) {
+    return apiFetch<{
+      project: ApiProject | null;
+      plan_id: string;
+    }>(`/plans/${planId}/project`);
+  }
+
+  static async generateProject(planId: string, forceRegenerate: boolean = false) {
+    return apiFetch<GenerateProjectResponse>(`/plans/${planId}/generate-project`, {
+      method: 'POST',
+      body: JSON.stringify({ force_regenerate: forceRegenerate }),
+    });
+  }
+
+  // Projects
+  static async getProjects(params?: {
+    limit?: number;
+    offset?: number;
+    status?: string;
+  }): Promise<ApiResponse<ProjectsResponse>> {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    if (params?.offset) searchParams.set('offset', params.offset.toString());
+    if (params?.status) searchParams.set('status', params.status);
+
+    const query = searchParams.toString();
+    return apiFetch<ProjectsResponse>(`/projects${query ? `?${query}` : ''}`);
+  }
+
+  static async getProjectDetail(projectId: string) {
+    return apiFetch<{
+      project: ApiProject;
+      plan: ApiPlan | null;
+    }>(`/projects/${projectId}`);
+  }
+
+  static async getJobStatus(jobId: string) {
+    return apiFetch<ProjectJobStatus>(`/jobs/${jobId}`);
   }
 
   // Debates

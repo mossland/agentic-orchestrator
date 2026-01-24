@@ -89,6 +89,13 @@ class PlanStatus(str, enum.Enum):
     REJECTED = "rejected"
 
 
+class ProjectStatus(str, enum.Enum):
+    PENDING = "pending"
+    GENERATING = "generating"
+    READY = "ready"
+    ERROR = "error"
+
+
 class LogLevel(str, enum.Enum):
     DEBUG = "debug"
     INFO = "info"
@@ -360,6 +367,7 @@ class Plan(Base):
 
     # Relationships
     idea = relationship("Idea", back_populates="plans")
+    projects = relationship("Project", back_populates="plan")
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -373,6 +381,40 @@ class Plan(Base):
             "final_plan_ko": self.final_plan_ko,
             "github_issue_url": self.github_issue_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class Project(Base):
+    """Generated project from an approved Plan."""
+
+    __tablename__ = "projects"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    plan_id = Column(String(36), ForeignKey("plans.id"), nullable=False, index=True)
+    name = Column(String(255), nullable=False)
+    directory_path = Column(Text)
+    tech_stack = Column(JSON)  # {"frontend": "nextjs", "backend": "fastapi", ...}
+    status = Column(String(20), default="pending", index=True)  # pending, generating, ready, error
+    files_generated = Column(Integer, default=0)
+    generation_log = Column(Text)
+    extra_metadata = Column("metadata", JSON)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime)
+
+    # Relationships
+    plan = relationship("Plan", back_populates="projects")
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "plan_id": self.plan_id,
+            "name": self.name,
+            "directory_path": self.directory_path,
+            "tech_stack": self.tech_stack or {},
+            "status": self.status,
+            "files_generated": self.files_generated,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
         }
 
 

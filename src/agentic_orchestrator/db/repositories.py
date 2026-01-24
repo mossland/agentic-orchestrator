@@ -17,6 +17,7 @@ from .models import (
     DebateSession,
     DebateMessage,
     Plan,
+    Project,
     APIUsage,
     SystemLog,
     AgentState,
@@ -475,6 +476,96 @@ class PlanRepository(BaseRepository):
             self.session.query(Plan)
             .order_by(desc(Plan.created_at))
             .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+
+class ProjectRepository(BaseRepository):
+    """Repository for Project operations."""
+
+    def create(self, project_data: Dict[str, Any]) -> Project:
+        """Create a new project."""
+        project = Project(**project_data)
+        self.session.add(project)
+        self.session.flush()
+        return project
+
+    def get_by_id(self, project_id: str) -> Optional[Project]:
+        """Get project by ID."""
+        return self.session.query(Project).filter(Project.id == project_id).first()
+
+    def get_by_plan(self, plan_id: str) -> Optional[Project]:
+        """Get project by plan ID."""
+        return (
+            self.session.query(Project)
+            .filter(Project.plan_id == plan_id)
+            .order_by(desc(Project.created_at))
+            .first()
+        )
+
+    def get_by_status(self, status: str, limit: int = 50) -> List[Project]:
+        """Get projects by status."""
+        return (
+            self.session.query(Project)
+            .filter(Project.status == status)
+            .order_by(desc(Project.created_at))
+            .limit(limit)
+            .all()
+        )
+
+    def update_status(
+        self,
+        project_id: str,
+        status: str,
+        directory_path: Optional[str] = None,
+        files_generated: Optional[int] = None,
+        generation_log: Optional[str] = None,
+    ) -> Optional[Project]:
+        """Update project status and related fields."""
+        project = self.get_by_id(project_id)
+        if project:
+            project.status = status
+            if directory_path is not None:
+                project.directory_path = directory_path
+            if files_generated is not None:
+                project.files_generated = files_generated
+            if generation_log is not None:
+                project.generation_log = generation_log
+            if status == "ready":
+                project.completed_at = datetime.utcnow()
+            self.session.flush()
+        return project
+
+    def count_all(self) -> int:
+        """Count all projects."""
+        return self.session.query(func.count(Project.id)).scalar() or 0
+
+    def count_by_status(self, status: str) -> int:
+        """Count projects by status."""
+        return (
+            self.session.query(func.count(Project.id))
+            .filter(Project.status == status)
+            .scalar() or 0
+        )
+
+    def get_all(self, limit: int = 100, offset: int = 0) -> List[Project]:
+        """Get all projects with pagination."""
+        return (
+            self.session.query(Project)
+            .order_by(desc(Project.created_at))
+            .offset(offset)
+            .limit(limit)
+            .all()
+        )
+
+    def get_recent(self, days: int = 7, limit: int = 50) -> List[Project]:
+        """Get recently created projects."""
+        since = datetime.utcnow() - timedelta(days=days)
+        return (
+            self.session.query(Project)
+            .filter(Project.created_at >= since)
+            .order_by(desc(Project.created_at))
             .limit(limit)
             .all()
         )

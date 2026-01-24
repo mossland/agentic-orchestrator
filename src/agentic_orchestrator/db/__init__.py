@@ -17,6 +17,7 @@ from .models import (
     DebateSession,
     DebateMessage,
     Plan,
+    Project,
     APIUsage,
     SystemLog,
     AgentState,
@@ -27,6 +28,7 @@ from .repositories import (
     IdeaRepository,
     DebateRepository,
     PlanRepository,
+    ProjectRepository,
     APIUsageRepository,
     SystemLogRepository,
 )
@@ -46,6 +48,7 @@ __all__ = [
     "DebateSession",
     "DebateMessage",
     "Plan",
+    "Project",
     "APIUsage",
     "SystemLog",
     "AgentState",
@@ -55,6 +58,7 @@ __all__ = [
     "IdeaRepository",
     "DebateRepository",
     "PlanRepository",
+    "ProjectRepository",
     "APIUsageRepository",
     "SystemLogRepository",
 ]

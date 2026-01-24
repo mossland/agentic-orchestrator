@@ -90,6 +90,32 @@ budget:
   # Critical alert at this percentage (prefer local models)
   critical_threshold: 0.9
 
+# =============================================================================
+# Project Generation Configuration
+# =============================================================================
+project:
+  # Auto-generation settings
+  auto_generate:
+    enabled: true
+    # Minimum score for automatic project generation
+    min_score: 8.0
+    # Maximum concurrent project generations
+    max_concurrent: 1
+
+  # LLM model selection for different tasks
+  llm:
+    # Plan parsing (fast, structured extraction)
+    parsing: "glm-4.7-flash"
+    # Code generation (balanced quality/speed)
+    code_generation: "qwen2.5:32b"
+    # Architecture design (complex reasoning)
+    architecture: "llama3.3:70b"
+    # Simple tasks / fallback (lightweight)
+    fallback: "phi4:14b"
+
+  # Output directory
+  output_dir: "projects"
+
 # Debate Configuration
 debate:
   # Test mode: Reduced agents for faster testing

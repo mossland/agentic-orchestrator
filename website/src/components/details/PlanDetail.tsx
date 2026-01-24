@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
-import { ApiClient, type ApiPlan } from '@/lib/api';
+import { ApiClient, type ApiPlan, type ApiProject } from '@/lib/api';
 import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { TerminalBadge } from '../TerminalWindow';
@@ -19,6 +19,13 @@ interface PlanWithContent extends ApiPlan {
   business_model_content: string | null;
   project_plan_content: string | null;
   updated_at: string | null;
+}
+
+interface ProjectState {
+  project: ApiProject | null;
+  jobId: string | null;
+  generating: boolean;
+  error: string | null;
 }
 
 type TabKey = 'prd' | 'architecture' | 'userResearch' | 'businessModel' | 'projectPlan' | 'final';
@@ -38,11 +45,103 @@ export function PlanDetail({ data }: PlanDetailProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>('prd');
+  const [projectState, setProjectState] = useState<ProjectState>({
+    project: null,
+    jobId: null,
+    generating: false,
+    error: null,
+  });
 
   // Helper function for localized text display
   const getLocalizedText = (en: string | null | undefined, ko: string | null | undefined): string => {
     if (locale === 'ko' && ko) return ko;
     return en || '';
+  };
+
+  // Fetch project status
+  const fetchProjectStatus = useCallback(async (planId: string) => {
+    try {
+      const response = await ApiClient.getPlanProject(planId);
+      if (response.data?.project) {
+        setProjectState(prev => ({
+          ...prev,
+          project: response.data!.project,
+          generating: response.data!.project?.status === 'generating',
+        }));
+      }
+    } catch (err) {
+      console.warn('Failed to fetch project status:', err);
+    }
+  }, []);
+
+  // Poll job status
+  const pollJobStatus = useCallback(async (jobId: string) => {
+    try {
+      const response = await ApiClient.getJobStatus(jobId);
+      if (response.data) {
+        const status = response.data.status;
+        if (status === 'completed' || status === 'failed') {
+          // Refresh project data
+          if (plan?.id) {
+            await fetchProjectStatus(plan.id);
+          }
+          setProjectState(prev => ({
+            ...prev,
+            jobId: null,
+            generating: false,
+            error: status === 'failed' ? response.data!.error || 'Generation failed' : null,
+          }));
+        } else if (status === 'in_progress' || status === 'pending') {
+          // Continue polling
+          setTimeout(() => pollJobStatus(jobId), 3000);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to poll job status:', err);
+    }
+  }, [fetchProjectStatus, plan?.id]);
+
+  // Handle generate project button click
+  const handleGenerateProject = async () => {
+    if (!plan?.id) return;
+
+    setProjectState(prev => ({
+      ...prev,
+      generating: true,
+      error: null,
+    }));
+
+    try {
+      const response = await ApiClient.generateProject(plan.id, false);
+      if (response.data) {
+        if (response.data.status === 'accepted') {
+          setProjectState(prev => ({
+            ...prev,
+            jobId: response.data!.job_id,
+          }));
+          // Start polling
+          pollJobStatus(response.data.job_id);
+        } else if (response.data.status === 'exists') {
+          // Refresh project data
+          await fetchProjectStatus(plan.id);
+          setProjectState(prev => ({ ...prev, generating: false }));
+        } else if (response.data.status === 'in_progress') {
+          setProjectState(prev => ({ ...prev, generating: true }));
+        }
+      } else {
+        setProjectState(prev => ({
+          ...prev,
+          generating: false,
+          error: response.error || 'Failed to start project generation',
+        }));
+      }
+    } catch (err) {
+      setProjectState(prev => ({
+        ...prev,
+        generating: false,
+        error: 'Failed to generate project',
+      }));
+    }
   };
 
   useEffect(() => {
@@ -59,6 +158,8 @@ export function PlanDetail({ data }: PlanDetailProps) {
           if (firstTabWithContent) {
             setActiveTab(firstTabWithContent.key);
           }
+          // Also fetch project status
+          await fetchProjectStatus(data.id);
         } else {
           setError(response.error || t('detail.fetchError'));
         }
@@ -70,7 +171,7 @@ export function PlanDetail({ data }: PlanDetailProps) {
     }
 
     fetchPlan();
-  }, [data.id, t]);
+  }, [data.id, t, fetchProjectStatus]);
 
   if (loading) {
     return (
@@ -213,6 +314,114 @@ export function PlanDetail({ data }: PlanDetailProps) {
           </a>
         </div>
       )}
+
+      {/* Project Generation Section */}
+      <div className="card-cli p-4">
+        <div className="text-xs text-[#6b7280] uppercase mb-3">
+          {locale === 'ko' ? '프로젝트 생성' : 'Project Generation'}
+        </div>
+
+        {/* Error message */}
+        {projectState.error && (
+          <div className="text-[#ff5555] text-sm mb-3 p-2 border border-[#ff5555]/30 rounded">
+            [ERROR] {projectState.error}
+          </div>
+        )}
+
+        {/* Project exists and ready */}
+        {projectState.project?.status === 'ready' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <TerminalBadge variant="green">READY</TerminalBadge>
+              <span className="text-[#c0c0c0] text-sm">
+                {projectState.project.name}
+              </span>
+            </div>
+            <div className="text-xs text-[#6b7280]">
+              <span>{locale === 'ko' ? '경로: ' : 'Path: '}</span>
+              <code className="text-[#00ffff]">{projectState.project.directory_path}</code>
+            </div>
+            {projectState.project.tech_stack && (
+              <div className="flex flex-wrap gap-2">
+                {projectState.project.tech_stack.frontend && (
+                  <TerminalBadge variant="cyan">{projectState.project.tech_stack.frontend}</TerminalBadge>
+                )}
+                {projectState.project.tech_stack.backend && (
+                  <TerminalBadge variant="purple">{projectState.project.tech_stack.backend}</TerminalBadge>
+                )}
+                {projectState.project.tech_stack.database && (
+                  <TerminalBadge variant="orange">{projectState.project.tech_stack.database}</TerminalBadge>
+                )}
+              </div>
+            )}
+            <div className="text-xs text-[#6b7280]">
+              {locale === 'ko' ? '생성된 파일: ' : 'Files generated: '}
+              <span className="text-[#39ff14]">{projectState.project.files_generated}</span>
+            </div>
+            <button
+              onClick={() => handleGenerateProject()}
+              className="w-full mt-2 px-4 py-2 text-sm border border-[#6b7280] text-[#6b7280] hover:border-[#00ffff] hover:text-[#00ffff] rounded transition-colors"
+            >
+              $ regenerate --force
+            </button>
+          </div>
+        )}
+
+        {/* Project generating */}
+        {(projectState.generating || projectState.project?.status === 'generating') && (
+          <div className="flex items-center gap-3">
+            <div className="animate-spin">
+              <svg className="w-5 h-5 text-[#00ffff]" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+            </div>
+            <span className="text-[#00ffff] animate-pulse">
+              $ generating_project
+              <span className="cursor-blink">▋</span>
+            </span>
+          </div>
+        )}
+
+        {/* Project error */}
+        {projectState.project?.status === 'error' && (
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <TerminalBadge variant="orange">ERROR</TerminalBadge>
+              <span className="text-[#c0c0c0] text-sm">
+                {locale === 'ko' ? '프로젝트 생성 실패' : 'Project generation failed'}
+              </span>
+            </div>
+            <button
+              onClick={() => handleGenerateProject()}
+              disabled={projectState.generating}
+              className="w-full px-4 py-2 text-sm border border-[#ff6b35] text-[#ff6b35] hover:bg-[#ff6b35]/10 rounded transition-colors disabled:opacity-50"
+            >
+              $ retry_generate
+            </button>
+          </div>
+        )}
+
+        {/* No project yet - show generate button for approved plans */}
+        {!projectState.project && !projectState.generating && plan.status === 'approved' && (
+          <button
+            onClick={handleGenerateProject}
+            disabled={projectState.generating}
+            className="w-full px-4 py-3 text-sm border border-[#39ff14] text-[#39ff14] hover:bg-[#39ff14]/10 rounded transition-colors font-mono disabled:opacity-50"
+          >
+            $ generate_project --from-plan {data.id}
+          </button>
+        )}
+
+        {/* Plan not approved */}
+        {!projectState.project && !projectState.generating && plan.status !== 'approved' && (
+          <div className="text-[#6b7280] text-sm">
+            {locale === 'ko'
+              ? '프로젝트 생성은 승인된 플랜에서만 가능합니다.'
+              : 'Project generation is only available for approved plans.'}
+          </div>
+        )}
+      </div>
     </motion.div>
   );
 }

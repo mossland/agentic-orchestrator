@@ -14,8 +14,8 @@ Endpoints:
 """
 
 from datetime import datetime
-from typing import Optional, List
-from fastapi import FastAPI, Query, Depends
+from typing import Optional, List, Dict, Any
+from fastapi import FastAPI, Query, Depends, BackgroundTasks, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -27,6 +27,7 @@ from ..db.repositories import (
     IdeaRepository,
     DebateRepository,
     PlanRepository,
+    ProjectRepository,
     APIUsageRepository,
     SystemLogRepository,
 )
@@ -1080,7 +1081,7 @@ async def root():
     """API root endpoint."""
     return {
         "name": "MOSS.AO API",
-        "version": "0.5.0",
+        "version": "0.6.0",
         "description": "Mossland Agentic Orchestrator API",
         "endpoints": {
             "health": "/health",
@@ -1089,6 +1090,7 @@ async def root():
             "trends": "/trends",
             "ideas": "/ideas",
             "plans": "/plans",
+            "projects": "/projects",
             "debates": "/debates",
             "usage": "/usage",
             "activity": "/activity",
@@ -1097,4 +1099,227 @@ async def root():
             "pipeline/live": "/pipeline/live",
             "docs": "/docs",
         },
+    }
+
+
+# =============================================================================
+# Project Generation Endpoints
+# =============================================================================
+
+# Background task storage for project generation jobs
+_project_jobs: Dict[str, Dict[str, Any]] = {}
+
+
+class GenerateProjectRequest(BaseModel):
+    """Request body for project generation."""
+    force_regenerate: bool = False
+
+
+class GenerateProjectResponse(BaseModel):
+    """Response for project generation trigger."""
+    job_id: str
+    status: str
+    message: str
+
+
+async def _generate_project_task(
+    job_id: str,
+    plan_id: str,
+    force_regenerate: bool,
+):
+    """Background task for project generation."""
+    import asyncio
+    from ..llm import HybridLLMRouter
+    from ..project import ProjectScaffold
+    from ..db import get_database
+
+    _project_jobs[job_id]["status"] = "in_progress"
+    _project_jobs[job_id]["started_at"] = datetime.utcnow().isoformat()
+
+    try:
+        # Initialize components
+        db = get_database()
+        session = db.get_session()
+        router = HybridLLMRouter()
+
+        # Create scaffold and generate
+        scaffold = ProjectScaffold(
+            router=router,
+            db_session=session,
+        )
+
+        result = await scaffold.generate_project(
+            plan_id=plan_id,
+            force_regenerate=force_regenerate,
+        )
+
+        session.commit()
+        session.close()
+
+        # Update job status
+        _project_jobs[job_id]["status"] = "completed" if result.success else "failed"
+        _project_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+        _project_jobs[job_id]["result"] = result.to_dict()
+
+    except Exception as e:
+        _project_jobs[job_id]["status"] = "failed"
+        _project_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
+        _project_jobs[job_id]["error"] = str(e)
+
+
+@app.post("/plans/{plan_id}/generate-project", response_model=GenerateProjectResponse)
+async def generate_project(
+    plan_id: str,
+    request: GenerateProjectRequest = GenerateProjectRequest(),
+    background_tasks: BackgroundTasks = None,
+    session: Session = Depends(get_session),
+):
+    """
+    Trigger project generation from an approved Plan.
+
+    This endpoint starts an asynchronous project generation job.
+    Use GET /jobs/{job_id} to check the status.
+    """
+    import uuid
+
+    # Verify plan exists and is approved
+    plan_repo = PlanRepository(session)
+    plan = plan_repo.get_by_id(plan_id)
+
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Plan not found: {plan_id}")
+
+    if plan.status != "approved" and not request.force_regenerate:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Plan must be approved for project generation. Current status: {plan.status}"
+        )
+
+    # Check if project already exists
+    project_repo = ProjectRepository(session)
+    existing = project_repo.get_by_plan(plan_id)
+
+    if existing and existing.status == "ready" and not request.force_regenerate:
+        return GenerateProjectResponse(
+            job_id="",
+            status="exists",
+            message=f"Project already exists. Use force_regenerate=true to regenerate.",
+        )
+
+    if existing and existing.status == "generating":
+        return GenerateProjectResponse(
+            job_id="",
+            status="in_progress",
+            message="Project generation is already in progress.",
+        )
+
+    # Create job ID
+    job_id = str(uuid.uuid4())[:8]
+
+    # Initialize job tracking
+    _project_jobs[job_id] = {
+        "job_id": job_id,
+        "plan_id": plan_id,
+        "status": "pending",
+        "created_at": datetime.utcnow().isoformat(),
+    }
+
+    # Start background task
+    if background_tasks:
+        background_tasks.add_task(
+            _generate_project_task,
+            job_id,
+            plan_id,
+            request.force_regenerate,
+        )
+    else:
+        # Fallback: run synchronously (for testing)
+        import asyncio
+        asyncio.create_task(_generate_project_task(job_id, plan_id, request.force_regenerate))
+
+    return GenerateProjectResponse(
+        job_id=job_id,
+        status="accepted",
+        message=f"Project generation started. Check status at /jobs/{job_id}",
+    )
+
+
+@app.get("/jobs/{job_id}")
+async def get_job_status(job_id: str):
+    """Get the status of an async job."""
+    if job_id not in _project_jobs:
+        raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
+
+    return _project_jobs[job_id]
+
+
+@app.get("/projects")
+async def get_projects(
+    limit: int = Query(default=20, le=100),
+    offset: int = Query(default=0, ge=0),
+    status: Optional[str] = None,
+    session: Session = Depends(get_session),
+):
+    """Get list of generated projects."""
+    repo = ProjectRepository(session)
+
+    if status:
+        projects = repo.get_by_status(status, limit=limit + offset)
+        total = repo.count_by_status(status)
+        paginated = projects[offset:offset + limit]
+    else:
+        projects = repo.get_all(limit=limit, offset=offset)
+        total = repo.count_all()
+        paginated = projects
+
+    return {
+        "projects": [p.to_dict() for p in paginated],
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@app.get("/projects/{project_id}")
+async def get_project_detail(
+    project_id: str,
+    session: Session = Depends(get_session),
+):
+    """Get detailed project information."""
+    repo = ProjectRepository(session)
+    plan_repo = PlanRepository(session)
+
+    project = repo.get_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail=f"Project not found: {project_id}")
+
+    # Get associated plan
+    plan = plan_repo.get_by_id(project.plan_id) if project.plan_id else None
+
+    return {
+        "project": project.to_dict(),
+        "plan": plan.to_dict() if plan else None,
+    }
+
+
+@app.get("/plans/{plan_id}/project")
+async def get_plan_project(
+    plan_id: str,
+    session: Session = Depends(get_session),
+):
+    """Get project associated with a plan."""
+    project_repo = ProjectRepository(session)
+    plan_repo = PlanRepository(session)
+
+    # Verify plan exists
+    plan = plan_repo.get_by_id(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Plan not found: {plan_id}")
+
+    # Get project
+    project = project_repo.get_by_plan(plan_id)
+
+    return {
+        "project": project.to_dict() if project else None,
+        "plan_id": plan_id,
     }

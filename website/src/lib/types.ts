@@ -167,3 +167,45 @@ export interface AdapterInfo {
   source_count?: number;
   error?: string;
 }
+
+// Project types
+export interface Project {
+  id: string;
+  plan_id: string;
+  name: string;
+  directory_path: string | null;
+  tech_stack: {
+    frontend?: string;
+    backend?: string;
+    database?: string;
+    blockchain?: string;
+    additional?: string[];
+  };
+  status: 'pending' | 'generating' | 'ready' | 'error';
+  files_generated: number;
+  created_at: string | null;
+  completed_at: string | null;
+}
+
+export interface GenerateProjectResponse {
+  job_id: string;
+  status: 'accepted' | 'exists' | 'in_progress';
+  message: string;
+}
+
+export interface ProjectJobStatus {
+  job_id: string;
+  plan_id: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'failed';
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+  result?: {
+    success: boolean;
+    project_id?: string;
+    project_path?: string;
+    files_generated?: number;
+    error?: string;
+  };
+  error?: string;
+}

@@ -9,6 +9,9 @@ import type { ModalData } from '../modals/ModalProvider';
 import { DebateConversation } from '../visualization/DebateConversation';
 import { DebateTimeline } from '../visualization/DebateTimeline';
 import { AgentContribution } from '../visualization/AgentContribution';
+import { DebateEvolution } from '../visualization/DebateEvolution';
+import { DebateQualityMetrics } from '../visualization/DebateQualityMetrics';
+import { LiveDebateViewer } from '../visualization/LiveDebateViewer';
 import { TerminalBadge } from '../TerminalWindow';
 
 interface DebateDetailProps {
@@ -37,7 +40,7 @@ export function DebateDetail({ data }: DebateDetailProps) {
   const [debateData, setDebateData] = useState<DebateWithMessages | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'conversation' | 'timeline'>('conversation');
+  const [viewMode, setViewMode] = useState<'conversation' | 'timeline' | 'live'>('live');
 
   useEffect(() => {
     async function fetchDebate() {
@@ -130,6 +133,32 @@ export function DebateDetail({ data }: DebateDetailProps) {
         </div>
       </div>
 
+      {/* Debate Evolution */}
+      {messages.length > 0 && (
+        <div className="card-cli p-4">
+          <DebateEvolution
+            messages={messages}
+            phase={debate.phase}
+            maxRounds={debate.max_rounds}
+            currentRound={debate.round_number}
+            showDetails={true}
+          />
+        </div>
+      )}
+
+      {/* Debate Quality Metrics */}
+      {messages.length > 0 && (
+        <div className="card-cli p-4">
+          <DebateQualityMetrics
+            messages={messages}
+            phase={debate.phase}
+            roundNumber={debate.round_number}
+            maxRounds={debate.max_rounds}
+            showDetails={true}
+          />
+        </div>
+      )}
+
       {/* Participants */}
       <div className="card-cli p-4">
         <div className="text-xs text-[#6b7280] uppercase mb-2">{t('detail.participants')}</div>
@@ -163,6 +192,12 @@ export function DebateDetail({ data }: DebateDetailProps) {
       {/* View Mode Toggle */}
       <div className="flex gap-2">
         <button
+          onClick={() => setViewMode('live')}
+          className={`btn-cli text-xs ${viewMode === 'live' ? 'bg-[#39ff14] text-black' : ''}`}
+        >
+          {t('liveDebate.title')}
+        </button>
+        <button
           onClick={() => setViewMode('conversation')}
           className={`btn-cli text-xs ${viewMode === 'conversation' ? 'bg-[#39ff14] text-black' : ''}`}
         >
@@ -177,8 +212,14 @@ export function DebateDetail({ data }: DebateDetailProps) {
       </div>
 
       {/* Messages */}
-      <div className="card-cli p-4 max-h-[500px] overflow-y-auto">
-        {viewMode === 'conversation' ? (
+      <div className="card-cli p-4">
+        {viewMode === 'live' ? (
+          <LiveDebateViewer
+            debate={debate}
+            messages={messages}
+            isLive={debate.status === 'in-progress'}
+          />
+        ) : viewMode === 'conversation' ? (
           <DebateConversation messages={messages} locale={locale} />
         ) : (
           <DebateTimeline messages={messages} locale={locale} />

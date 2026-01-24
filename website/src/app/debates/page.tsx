@@ -102,7 +102,7 @@ export default function DebatesPage() {
         >
           <div className="flex items-center gap-3 mb-2">
             <h1 className="text-2xl font-bold text-[#ff6b35]">
-              Agent Debates
+              {t('debates.pageTitle')}
             </h1>
             {hasActiveDebate && (
               <motion.div
@@ -115,13 +115,13 @@ export default function DebatesPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-[#ff6b35]" />
                 </span>
                 <span className="text-[10px] font-bold text-[#ff6b35] uppercase tracking-wider">
-                  Live Debate
+                  {t('debates.liveDebate')}
                 </span>
               </motion.div>
             )}
           </div>
           <p className="text-sm text-[#6b7280]">
-            Watch how AI agents discuss and refine ideas together
+            {t('debates.pageSubtitle')}
           </p>
         </motion.div>
 
@@ -191,29 +191,29 @@ export default function DebatesPage() {
         <TerminalWindow title="FILTERS" className="mb-6">
           <div className="flex flex-wrap gap-4 items-end">
             <div>
-              <label className="text-xs text-[#6b7280] block mb-1">Status</label>
+              <label className="text-xs text-[#6b7280] block mb-1">{t('debates.filter.status')}</label>
               <select
                 value={filter.status || ''}
                 onChange={(e) => setFilter({ ...filter, status: e.target.value || undefined })}
                 className="input-cli text-sm"
               >
-                <option value="">All</option>
-                <option value="active">Active (Live)</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="">{t('debates.filter.all')}</option>
+                <option value="active">{t('debates.filter.active')}</option>
+                <option value="completed">{t('debates.filter.completed')}</option>
+                <option value="cancelled">{t('debates.filter.cancelled')}</option>
               </select>
             </div>
             <div>
-              <label className="text-xs text-[#6b7280] block mb-1">Phase</label>
+              <label className="text-xs text-[#6b7280] block mb-1">{t('debates.filter.phase')}</label>
               <select
                 value={filter.phase || ''}
                 onChange={(e) => setFilter({ ...filter, phase: e.target.value || undefined })}
                 className="input-cli text-sm"
               >
-                <option value="">All Phases</option>
-                <option value="divergence">Divergence</option>
-                <option value="convergence">Convergence</option>
-                <option value="planning">Planning</option>
+                <option value="">{t('debates.filter.allPhases')}</option>
+                <option value="divergence">{t('debates.phase.divergence')}</option>
+                <option value="convergence">{t('debates.phase.convergence')}</option>
+                <option value="planning">{t('debates.phase.planning')}</option>
               </select>
             </div>
 
@@ -223,14 +223,14 @@ export default function DebatesPage() {
                 {hasActiveDebate ? (
                   <span className="text-[#ff6b35]">
                     <span className="inline-block w-2 h-2 rounded-full bg-[#ff6b35] animate-pulse mr-1" />
-                    Live polling (5s)
+                    {t('debates.livePolling')}
                   </span>
                 ) : (
-                  <span>Auto-refresh (30s)</span>
+                  <span>{t('debates.autoRefresh')}</span>
                 )}
               </div>
               <div className="text-[10px] text-[#3b3b3b]">
-                Last update: {lastUpdate.toLocaleTimeString()}
+                {t('debates.lastUpdate')}: {lastUpdate.toLocaleTimeString()}
               </div>
             </div>
           </div>
@@ -241,16 +241,16 @@ export default function DebatesPage() {
           {loading ? (
             <div className="text-center py-12">
               <div className="text-[#ff6b35] animate-pulse">
-                Loading debates...
+                {t('debates.loading')}
                 <span className="cursor-blink">_</span>
               </div>
             </div>
           ) : debates.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-4">💬</div>
-              <div className="text-[#6b7280] mb-2">No debates yet</div>
+              <div className="text-[#6b7280] mb-2">{t('debates.noDebates')}</div>
               <div className="text-xs text-[#3b3b3b]">
-                Debates will appear here when agents discuss ideas
+                {t('debates.noDebatesDesc')}
               </div>
             </div>
           ) : (

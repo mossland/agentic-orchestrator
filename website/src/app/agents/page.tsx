@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useI18n } from '@/lib/i18n';
 import { TerminalWindow } from '@/components/TerminalWindow';
 import { useModal } from '@/components/modals/useModal';
 import { ApiClient } from '@/lib/api';
@@ -113,6 +114,7 @@ function AgentCard({ agent, index, phase, onClick }: AgentCardProps) {
 }
 
 export default function AgentsPage() {
+  const { t } = useI18n();
   const { openModal } = useModal();
   const [apiAgents, setApiAgents] = useState<{
     divergence: AgentFromApi[];
@@ -199,18 +201,18 @@ export default function AgentsPage() {
             <span className="text-[#c0c0c0] text-sm">moss-ao agents --list</span>
           </div>
           <h1 className="text-[#39ff14] text-xl font-bold glow-green">
-            AGENT PERSONAS
+            {t('agents.pageTitle').toUpperCase()}
           </h1>
           <p className="text-[#6b7280] text-xs mt-1">
-            34 unique AI agents with distinct personalities for multi-stage debates
-            {usingFallback && <span className="text-[#f1fa8c] ml-2">(showing cached data)</span>}
+            {t('agents.pageSubtitle')}
+            {usingFallback && <span className="text-[#f1fa8c] ml-2">{t('agents.cachedData')}</span>}
           </p>
         </motion.div>
 
         {loading ? (
           <div className="text-center py-12">
             <div className="text-[#39ff14] animate-pulse">
-              Loading agents...
+              {t('agents.loading')}
               <span className="cursor-blink">_</span>
             </div>
           </div>
@@ -226,12 +228,12 @@ export default function AgentsPage() {
               <TerminalWindow title="divergence_agents.json">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="tag tag-cyan">PHASE 1</span>
-                    <span className="text-[#00ffff] text-xs font-bold">Divergence</span>
-                    <span className="text-[#6b7280] text-xs">- Idea generation ({divergenceAgents.length} agents)</span>
+                    <span className="tag tag-cyan">{t('agents.phaseNum.1')}</span>
+                    <span className="text-[#00ffff] text-xs font-bold">{t('agents.phase.divergence')}</span>
+                    <span className="text-[#6b7280] text-xs">- {t('agents.phaseDesc.divergence')} ({divergenceAgents.length} {t('agents.agents')})</span>
                   </div>
                   <p className="text-[10px] text-[#6b7280]">
-                    Creative agents that generate diverse ideas and perspectives
+                    {t('agents.phaseInfo.divergence')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -258,12 +260,12 @@ export default function AgentsPage() {
               <TerminalWindow title="convergence_agents.json">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="tag tag-purple">PHASE 2</span>
-                    <span className="text-[#bd93f9] text-xs font-bold">Convergence</span>
-                    <span className="text-[#6b7280] text-xs">- Evaluation & filtering ({convergenceAgents.length} agents)</span>
+                    <span className="tag tag-purple">{t('agents.phaseNum.2')}</span>
+                    <span className="text-[#bd93f9] text-xs font-bold">{t('agents.phase.convergence')}</span>
+                    <span className="text-[#6b7280] text-xs">- {t('agents.phaseDesc.convergence')} ({convergenceAgents.length} {t('agents.agents')})</span>
                   </div>
                   <p className="text-[10px] text-[#6b7280]">
-                    Analytical agents that evaluate, score, and merge ideas
+                    {t('agents.phaseInfo.convergence')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -290,12 +292,12 @@ export default function AgentsPage() {
               <TerminalWindow title="planning_agents.json">
                 <div className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="tag tag-green">PHASE 3</span>
-                    <span className="text-[#39ff14] text-xs font-bold">Planning</span>
-                    <span className="text-[#6b7280] text-xs">- Plan creation ({planningAgents.length} agents)</span>
+                    <span className="tag tag-green">{t('agents.phaseNum.3')}</span>
+                    <span className="text-[#39ff14] text-xs font-bold">{t('agents.phase.planning')}</span>
+                    <span className="text-[#6b7280] text-xs">- {t('agents.phaseDesc.planning')} ({planningAgents.length} {t('agents.agents')})</span>
                   </div>
                   <p className="text-[10px] text-[#6b7280]">
-                    Execution-focused agents that create actionable plans
+                    {t('agents.phaseInfo.planning')}
                   </p>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -325,29 +327,29 @@ export default function AgentsPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-3">
                   <div>
-                    <span className="text-[#00ffff] text-xs font-bold">Thinking Style</span>
+                    <span className="text-[#00ffff] text-xs font-bold">{t('agents.thinkingStyle')}</span>
                     <div className="text-[10px] text-[#6b7280] mt-1">
-                      <span className="text-[#39ff14]">Optimistic</span> vs <span className="text-[#ff5555]">Cautious</span>
+                      <span className="text-[#39ff14]">{t('agents.optimistic')}</span> vs <span className="text-[#ff5555]">{t('agents.cautious')}</span>
                     </div>
                   </div>
                   <div>
-                    <span className="text-[#bd93f9] text-xs font-bold">Decision Style</span>
+                    <span className="text-[#bd93f9] text-xs font-bold">{t('agents.decisionStyle')}</span>
                     <div className="text-[10px] text-[#6b7280] mt-1">
-                      <span className="text-[#f1fa8c]">Intuitive</span> vs <span className="text-[#00ffff]">Analytical</span>
+                      <span className="text-[#f1fa8c]">{t('agents.intuitive')}</span> vs <span className="text-[#00ffff]">{t('agents.analytical')}</span>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div>
-                    <span className="text-[#ff6b35] text-xs font-bold">Communication Style</span>
+                    <span className="text-[#ff6b35] text-xs font-bold">{t('agents.communicationStyle')}</span>
                     <div className="text-[10px] text-[#6b7280] mt-1">
-                      <span className="text-[#ff6b35]">Challenger</span> vs <span className="text-[#39ff14]">Supporter</span>
+                      <span className="text-[#ff6b35]">{t('agents.challenger')}</span> vs <span className="text-[#39ff14]">{t('agents.supporter')}</span>
                     </div>
                   </div>
                   <div>
-                    <span className="text-[#f1fa8c] text-xs font-bold">Action Style</span>
+                    <span className="text-[#f1fa8c] text-xs font-bold">{t('agents.actionStyle')}</span>
                     <div className="text-[10px] text-[#6b7280] mt-1">
-                      <span className="text-[#bd93f9]">Innovative</span> vs <span className="text-[#c0c0c0]">Pragmatic</span>
+                      <span className="text-[#bd93f9]">{t('agents.innovative')}</span> vs <span className="text-[#c0c0c0]">{t('agents.pragmatic')}</span>
                     </div>
                   </div>
                 </div>

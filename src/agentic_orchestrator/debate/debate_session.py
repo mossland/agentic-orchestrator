@@ -278,18 +278,12 @@ class DebateSession:
         not_reflected = []
         improvement_status = "Needs Further Discussion"
 
-        # Extract improvement status (English patterns first, then Korean)
+        # Extract improvement status
         if re.search(r"\*\*Sufficiently Improved\*\*", response, re.IGNORECASE):
             improvement_status = "Sufficiently Improved"
         elif re.search(r"Sufficiently Improved", response, re.IGNORECASE):
             improvement_status = "Sufficiently Improved"
-        elif re.search(r"\*\*충분히 개선됨\*\*", response):
-            improvement_status = "Sufficiently Improved"
-        elif re.search(r"충분히 개선됨", response):
-            improvement_status = "Sufficiently Improved"
         elif re.search(r"\*\*Needs Further Discussion\*\*", response, re.IGNORECASE):
-            improvement_status = "Needs Further Discussion"
-        elif re.search(r"\*\*추가 논의 필요\*\*", response):
             improvement_status = "Needs Further Discussion"
 
         # Try to extract reflected/not reflected items from table format
@@ -303,15 +297,11 @@ class DebateSession:
         for line in lines:
             line_lower = line.lower()
 
-            # Detect section (English first, then Korean)
-            if (
-                "adopted feedback" in line_lower
-                or "반영할 피드백" in line
-                or "반영한 피드백" in line
-            ):
+            # Detect section
+            if "adopted feedback" in line_lower:
                 in_reflected_section = True
                 in_not_reflected_section = False
-            elif "rejected feedback" in line_lower or "미반영" in line:
+            elif "rejected feedback" in line_lower:
                 in_reflected_section = False
                 in_not_reflected_section = True
             elif line.startswith("##"):
@@ -325,8 +315,8 @@ class DebateSession:
                 content = match.group(2).strip()
                 reason = match.group(3).strip()
 
-                # Skip header rows (English and Korean)
-                if source.lower() in ["source", "피드백 출처", "---", "출처", "역할"]:
+                # Skip header rows
+                if source.lower() in ["source", "---", "role"]:
                     continue
 
                 entry = {
@@ -358,11 +348,9 @@ class DebateSession:
                 logger.info("Extracted plan using PLAN_START/PLAN_END markers")
                 return plan_content
 
-        # Priority 2: Look for "## Updated Plan" or Korean equivalent sections
+        # Priority 2: Look for "## Updated Plan" section
         section_patterns = [
-            r"##\s*Updated Plan\s*\n(.*?)(?=\n---|\n##\s+[^#]|\[Korean Translation|\Z)",
-            r"##\s*업데이트된 기획서\s*\n(.*?)(?=\n---|\n##\s+[^#]|\Z)",
-            r"##\s*개선된 기획서\s*\n(.*?)(?=\n---|\n##\s+[^#]|\Z)",
+            r"##\s*Updated Plan\s*\n(.*?)(?=\n---|\n##\s+[^#]|\Z)",
         ]
 
         for pattern in section_patterns:

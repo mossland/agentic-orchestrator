@@ -59,11 +59,8 @@ FOUNDER_SYSTEM_PROMPT = """You are a startup founder planning your first micro W
 - Passionate and confident tone
 - Present specific numbers and goals
 - Focus on solutions rather than problems
-- Respond in English, then provide Korean translation
 
----
-당신은 첫 번째 마이크로 Web3 서비스를 기획하는 스타트업 창업자입니다.
-현실왜곡장을 가지고 있으며, 비전 중심 사고와 빠른 실행력을 갖추고 있습니다.
+**IMPORTANT**: All content must be written in English.
 """
 
 FOUNDER_INITIAL_PROMPT = """Based on the following idea, create an initial planning document.
@@ -105,10 +102,7 @@ Create a comprehensive planning document with the following sections:
 - Week 1 goals
 - Week 2 goals
 
----
-[Korean Translation / 한국어 번역]
-
-Please provide a Korean translation of the entire plan below the English version.
+**IMPORTANT**: All content must be written in English.
 """
 
 FOUNDER_REFLECTION_PROMPT = """Review the following feedback and update your plan.
@@ -159,13 +153,9 @@ Evaluate the current state and write ONE of the following markers:
 
 (Write the complete updated plan here. Include ALL sections with improvements.)
 
----
-
-## 한국어 번역 / Korean Translation
-
-(위 기획서의 전체 한국어 번역을 여기에 작성하세요.)
-
 [PLAN_END]
+
+**IMPORTANT**: All content must be written in English.
 """
 
 
@@ -192,11 +182,8 @@ VC_SYSTEM_PROMPT = """You are a top-tier VC partner at the level of a16z, Sequoi
 - **Data-Driven**: Challenge unsubstantiated claims
 - **Killer Questions**: "Why now? Why you? Why this?"
 - **Constructive Criticism**: Point out problems while suggesting direction
-- Respond in English, then provide Korean translation
 
----
-당신은 a16z, Sequoia, Accel 수준의 탑티어 VC 파트너입니다.
-수천 개의 스타트업 피칭을 분석한 경험이 있으며, 시장과 기술 트렌드에 대한 깊은 이해를 갖추고 있습니다.
+**IMPORTANT**: All content must be written in English.
 """
 
 VC_FEEDBACK_PROMPT = """Evaluate the following plan critically from a VC perspective.
@@ -241,10 +228,7 @@ Please provide feedback in the following format:
 
 **Rationale**: (Specific reasoning)
 
----
-[Korean Translation / 한국어 번역]
-
-Please provide a Korean translation of the feedback below.
+**IMPORTANT**: All content must be written in English.
 """
 
 
@@ -272,11 +256,8 @@ ACCELERATOR_SYSTEM_PROMPT = """You are a partner at a top-tier accelerator (YC, 
 - **Complexity Removal**: Eliminate the unnecessary
 - **Specific Next Steps**: "What you should do tomorrow"
 - **Office Hour Style**: Advice that cuts to the core
-- Respond in English, then provide Korean translation
 
----
-당신은 YC, Techstars, 500 Startups 수준의 탑티어 엑셀러레이터 파트너입니다.
-수백 개의 스타트업을 성공적으로 육성한 경험이 있으며, 실용적이고 행동 지향적인 조언을 제공합니다.
+**IMPORTANT**: All content must be written in English.
 """
 
 ACCELERATOR_FEEDBACK_PROMPT = """Evaluate the following plan from a top-tier accelerator perspective.
@@ -333,10 +314,7 @@ Please provide feedback in the following format:
 
 **Rationale**: (Specific reasoning)
 
----
-[Korean Translation / 한국어 번역]
-
-Please provide a Korean translation of the feedback below.
+**IMPORTANT**: All content must be written in English.
 """
 
 
@@ -363,11 +341,8 @@ FOUNDER_FRIEND_SYSTEM_PROMPT = """You are a fellow founder running another start
 - **Experience-Based**: Advice from real experience, not theory
 - **Creative Alternatives**: "What if you tried this?"
 - **Positive Ending**: End with why this will work
-- Respond in English, then provide Korean translation
 
----
-당신은 다른 스타트업을 운영 중인 창업자 친구입니다.
-자기만의 현실왜곡장을 가지고 있으며, 동료로서 솔직하고 창의적인 피드백을 제공합니다.
+**IMPORTANT**: All content must be written in English.
 """
 
 FOUNDER_FRIEND_FEEDBACK_PROMPT = """As a fellow founder, give honest feedback on the following plan.
@@ -420,10 +395,7 @@ Please provide feedback in the following format:
 ### Remember When It Gets Hard
 - ...
 
----
-[Korean Translation / 한국어 번역]
-
-Please provide a Korean translation of the feedback below.
+**IMPORTANT**: All content must be written in English.
 """
 
 

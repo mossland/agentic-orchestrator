@@ -744,23 +744,23 @@ class MultiStageDebate:
 
         if avg_similarity > 0.4:
             feedback_parts.append(
-                f"\n⚠️ **주의**: 기존 아이디어들의 평균 유사도가 {avg_similarity*100:.0f}%로 높습니다. "
-                "완전히 다른 관점이나 접근 방식을 시도해주세요."
+                f"\n⚠️ **Warning**: The average similarity of existing ideas is {avg_similarity*100:.0f}%. "
+                "Please try a completely different perspective or approach."
             )
 
         if common_keywords:
             feedback_parts.append(
-                f"\n📊 자주 등장하는 키워드: {', '.join(common_keywords)}\n"
-                "→ 이 키워드들을 피하고 새로운 영역을 탐색해보세요."
+                f"\n📊 Frequently used keywords: {', '.join(common_keywords)}\n"
+                "→ Avoid these keywords and explore new areas."
             )
 
         if avg_similarity > 0.3:
             feedback_parts.append(
-                "\n💡 차별화 힌트:\n"
-                "- 다른 사용자층을 타겟팅해보세요\n"
-                "- 다른 기술 스택이나 플랫폼을 고려해보세요\n"
-                "- 완전히 다른 비즈니스 모델을 제안해보세요\n"
-                "- 단기/장기 관점을 바꿔보세요"
+                "\n💡 Differentiation hints:\n"
+                "- Try targeting a different user segment\n"
+                "- Consider a different tech stack or platform\n"
+                "- Propose a completely different business model\n"
+                "- Switch between short-term and long-term perspectives"
             )
 
         return "\n".join(feedback_parts)
@@ -789,15 +789,16 @@ class MultiStageDebate:
         if similarity_feedback:
             prompt += similarity_feedback
 
-        system_prompt = f"""당신은 {agent.name}입니다.
-역할: {agent.role}
-전문분야: {', '.join(agent.expertise)}
+        system_prompt = f"""You are {agent.name}.
+Role: {agent.role}
+Expertise: {', '.join(agent.expertise)}
 
 {agent.system_prompt_template}
 
-성향: {agent.personality.get_trait_description()}
+Personality Traits: {agent.personality.get_trait_description()}
 
-당신의 고유한 관점과 전문성으로 의견을 제시하세요."""
+Present your opinion with your unique perspective and expertise.
+**IMPORTANT**: All content must be written in English."""
 
         try:
             response = await self.router.route(
@@ -853,12 +854,13 @@ class MultiStageDebate:
             round_num=round_num,
         )
 
-        system_prompt = f"""당신은 {agent.name}입니다.
-역할: {agent.role}
-전문분야: {agent.expertise}
+        system_prompt = f"""You are {agent.name}.
+Role: {agent.role}
+Expertise: {agent.expertise}
 
-아이디어를 평가하고 점수를 매기는 것이 당신의 임무입니다.
-각 아이디어에 1-10점 사이의 점수를 부여하세요."""
+Your task is to evaluate ideas and assign scores.
+Assign a score between 1-10 for each idea.
+**IMPORTANT**: All content must be written in English."""
 
         try:
             response = await self.router.route(
@@ -911,11 +913,12 @@ class MultiStageDebate:
             round_num=round_num,
         )
 
-        system_prompt = f"""당신은 {agent.name}입니다.
-역할: {agent.role}
-전문분야: {agent.expertise}
+        system_prompt = f"""You are {agent.name}.
+Role: {agent.role}
+Expertise: {agent.expertise}
 
-실행 가능한 기획안을 작성하는 것이 당신의 임무입니다."""
+Your task is to write an actionable implementation plan.
+**IMPORTANT**: All content must be written in English."""
 
         try:
             response = await self.router.route(
@@ -966,12 +969,13 @@ class MultiStageDebate:
             draft_plan=draft_plan,
         )
 
-        system_prompt = f"""당신은 {agent.name}입니다.
-역할: {agent.role}
-전문분야: {agent.expertise}
+        system_prompt = f"""You are {agent.name}.
+Role: {agent.role}
+Expertise: {agent.expertise}
 
-기획안을 검토하고 피드백을 제공하세요.
-마지막에 [승인] 또는 [수정요청] 또는 [반대]를 명시하세요."""
+Review the plan and provide feedback.
+At the end, specify [Approved], [Needs Revision], or [Rejected].
+**IMPORTANT**: All content must be written in English."""
 
         try:
             response = await self.router.route(
@@ -998,7 +1002,7 @@ class MultiStageDebate:
             )
 
             # Check approval
-            is_approved = "[승인]" in response.content or "[approve]" in response.content.lower()
+            is_approved = "[approved]" in response.content.lower() or "[approve]" in response.content.lower()
 
             return message, is_approved, response.content, response.input_tokens + response.output_tokens, response.cost
 
@@ -1033,28 +1037,28 @@ class MultiStageDebate:
                 required_fields = ['idea_title', 'core_analysis', 'proposal']
                 for field in required_fields:
                     if field not in idea_json:
-                        errors.append(f"JSON 필드 '{field}' 누락")
+                        errors.append(f"Missing JSON field '{field}'")
 
                 # Validate title length
                 title = idea_json.get('idea_title', '')
                 if len(title) < 30:
-                    errors.append(f"제목이 너무 짧음 ({len(title)}자 < 30자)")
+                    errors.append(f"Title too short ({len(title)} chars < 30 chars)")
 
                 # Validate core_analysis length
                 core = idea_json.get('core_analysis', '')
                 if len(core) < 100:
-                    errors.append(f"핵심 분석이 너무 짧음 ({len(core)}자 < 100자)")
+                    errors.append(f"Core analysis too short ({len(core)} chars < 100 chars)")
 
                 # Validate proposal description
                 proposal = idea_json.get('proposal', {})
                 if isinstance(proposal, dict):
                     desc = proposal.get('description', '')
                     if len(desc) < 150:
-                        errors.append(f"제안 설명이 너무 짧음 ({len(desc)}자 < 150자)")
+                        errors.append(f"Proposal description too short ({len(desc)} chars < 150 chars)")
 
                     features = proposal.get('core_features', [])
                     if len(features) < 3:
-                        errors.append(f"핵심 기능이 부족함 ({len(features)}개 < 3개)")
+                        errors.append(f"Insufficient core features ({len(features)} < 3)")
 
                 return len(errors) == 0, errors
 
@@ -1064,10 +1068,10 @@ class MultiStageDebate:
 
         # Text-based validation (fallback)
         required_sections = [
-            ("핵심 분석", 80),
-            ("기회", 80),
-            ("제안", 120),
-            ("로드맵", 60),
+            ("Core Analysis", 80),
+            ("Opportunity", 80),
+            ("Proposal", 120),
+            ("Roadmap", 60),
         ]
 
         for section_name, min_chars in required_sections:
@@ -1087,12 +1091,12 @@ class MultiStageDebate:
                         found = True
                         break
                     else:
-                        errors.append(f"'{section_name}' 섹션이 너무 짧음 ({len(section_content)}자 < {min_chars}자)")
+                        errors.append(f"'{section_name}' section too short ({len(section_content)} chars < {min_chars} chars)")
                         found = True
                         break
 
-            if not found and section_name not in content:
-                errors.append(f"'{section_name}' 섹션 누락")
+            if not found and section_name.lower() not in content.lower():
+                errors.append(f"'{section_name}' section missing")
 
         return len(errors) == 0, errors
 
@@ -1128,8 +1132,8 @@ class MultiStageDebate:
             'DEX', 'CEX', 'AMM', 'TVL', 'APY', 'APR', 'L2', 'ZK', 'EVM',
             'Solidity', 'React', 'Python', 'TypeScript', 'Rust',
             'Uniswap', 'Aave', 'OpenAI', 'Claude', 'Anthropic',
-            '블록체인', '메타버스', '스마트컨트랙트', '토큰', '지갑',
-            '에이전트', '자동화', '분석', '트래킹', '대시보드', '플랫폼'
+            'blockchain', 'metaverse', 'smart contract', 'token', 'wallet',
+            'agent', 'automation', 'analytics', 'tracking', 'dashboard', 'platform'
         ]
         tech_matches = sum(1 for kw in tech_keywords if kw.lower() in title.lower())
         score += min(tech_matches * 1.0, 3.0)
@@ -1141,7 +1145,7 @@ class MultiStageDebate:
             score += 1.0
 
         # Mossland relevance score
-        mossland_keywords = ['mossland', 'moc', 'moss', '모스', '모스랜드', 'ar', 'metaverse', '메타버스']
+        mossland_keywords = ['mossland', 'moc', 'moss', 'ar', 'metaverse']
         if any(kw in title.lower() for kw in mossland_keywords):
             score += 2.0
 
@@ -1209,21 +1213,20 @@ class MultiStageDebate:
 
         # Generic section headers to skip (expanded list)
         skip_headers = [
-            '핵심 분석', '기회', '리스크', '제안', '우선순위', '실행', '개요', '목표',
-            '요약', '결론', '배경', '현황', '분석', '전략', '방안', '계획', '일정',
-            '기대 효과', '예상 결과', '참고', '부록', '첨부', '서론', '본론',
-            '소개', '개요', '요점', '핵심', 'summary', 'introduction', 'conclusion',
-            'overview', 'background', 'analysis', 'proposal'
+            'core analysis', 'opportunity', 'risk', 'proposal', 'priority', 'execution', 'overview', 'goals',
+            'summary', 'conclusion', 'background', 'status', 'analysis', 'strategy', 'plan', 'schedule',
+            'expected results', 'expected outcomes', 'reference', 'appendix', 'introduction',
+            'key points', 'key insights'
         ]
 
         def is_generic_header(text: str) -> bool:
             text_lower = text.lower().strip()
-            # Check for exact matches or patterns like "1. 핵심 분석"
+            # Check for exact matches
             for skip in skip_headers:
                 if skip in text_lower:
                     return True
             # Check for numbered generic headers
-            if re.match(r'^[\d]+[\.\)]\s*[가-힣]{2,4}$', text_lower):
+            if re.match(r'^[\d]+[\.\)]\s*[a-z]{2,15}$', text_lower):
                 return True
             return False
 
@@ -1231,10 +1234,10 @@ class MultiStageDebate:
             """Check if title contains specific keywords that make it valuable."""
             specific_patterns = [
                 r'(AI|DeFi|NFT|DAO|Web3|GPT|LLM|SDK|API)',  # Tech acronyms
-                r'(Uniswap|Aave|OpenAI|Mossland|모스랜드)',  # Project names
+                r'(Uniswap|Aave|OpenAI|Mossland)',  # Project names
                 r'\d+',  # Contains numbers (metrics, versions)
-                r'(홀더|유저|개발자|크리에이터)',  # User types
-                r'(플랫폼|시스템|서비스|도구|봇)',  # Product types
+                r'(holder|user|developer|creator)',  # User types
+                r'(platform|system|service|tool|bot)',  # Product types
             ]
             for pattern in specific_patterns:
                 if re.search(pattern, text, re.IGNORECASE):
@@ -1243,27 +1246,27 @@ class MultiStageDebate:
 
         title = None
 
-        # Priority 1: Look for "## 아이디어: [제목]" format
-        idea_pattern = r"##\s*아이디어[:\s]+(.+)"
+        # Priority 1: Look for "## Idea: [title]" format
+        idea_pattern = r"##\s*(?:Idea|idea)[:\s]+(.+)"
         match = re.search(idea_pattern, content)
         if match:
             potential = match.group(1).strip()
             if len(potential) >= 30 and not is_generic_header(potential):
                 title = potential
 
-        # Priority 2: Look for "프로젝트 명:" or "프로젝트명:" format
+        # Priority 2: Look for "Project Name:" format
         if not title:
-            project_pattern = r"프로젝트\s*명[:\s]+(.+)"
-            match = re.search(project_pattern, content)
+            project_pattern = r"Project\s*Name[:\s]+(.+)"
+            match = re.search(project_pattern, content, re.IGNORECASE)
             if match:
                 potential = match.group(1).strip()
                 if len(potential) >= 30 and not is_generic_header(potential):
                     title = potential
 
-        # Priority 3: Look for "서비스명:" or "제품명:" format
+        # Priority 3: Look for "Service Name:" or "Product Name:" format
         if not title:
-            service_pattern = r"(서비스|제품|솔루션)\s*명[:\s]+(.+)"
-            match = re.search(service_pattern, content)
+            service_pattern = r"(Service|Product|Solution)\s*Name[:\s]+(.+)"
+            match = re.search(service_pattern, content, re.IGNORECASE)
             if match:
                 potential = match.group(2).strip()
                 if len(potential) >= 30 and not is_generic_header(potential):
@@ -1275,7 +1278,7 @@ class MultiStageDebate:
                 line = line.strip()
                 if is_generic_header(line):
                     continue
-                if line.startswith("##") and "아이디어" not in line:
+                if line.startswith("##") and "idea" not in line.lower():
                     potential = line.lstrip("#").strip()
                     if len(potential) >= 30 and has_specific_content(potential):
                         title = potential
@@ -1301,9 +1304,9 @@ class MultiStageDebate:
         # Fallback: Generate descriptive title from content analysis
         if not title or len(title) < 30:
             # Extract meaningful keywords from content
-            tech_matches = re.findall(r'(AI|DeFi|NFT|DAO|Web3|블록체인|메타버스|에이전트|스마트 컨트랙트)', content[:1000])
-            action_matches = re.findall(r'(자동화|분석|트래킹|모니터링|대시보드|최적화|통합|연동)', content[:1000])
-            target_matches = re.findall(r'(홀더|유저|개발자|커뮤니티|투자자)', content[:1000])
+            tech_matches = re.findall(r'(AI|DeFi|NFT|DAO|Web3|blockchain|metaverse|agent|smart contract)', content[:1000], re.IGNORECASE)
+            action_matches = re.findall(r'(automation|analytics|tracking|monitoring|dashboard|optimization|integration)', content[:1000], re.IGNORECASE)
+            target_matches = re.findall(r'(holder|user|developer|community|investor)', content[:1000], re.IGNORECASE)
 
             tech = list(dict.fromkeys(tech_matches))[:2]  # Unique, max 2
             actions = list(dict.fromkeys(action_matches))[:1]
@@ -1311,22 +1314,22 @@ class MultiStageDebate:
 
             parts = []
             if targets:
-                parts.append(f"{targets[0]}를 위한")
+                parts.append(f"{targets[0].capitalize()}-focused")
             if tech:
                 parts.append(' + '.join(tech))
             if actions:
-                parts.append(f"{actions[0]} 시스템")
+                parts.append(f"{actions[0].capitalize()} System")
             else:
-                parts.append("솔루션")
+                parts.append("Solution")
 
             if parts:
-                title = f"Mossland {' '.join(parts)} 구축 방안"
+                title = f"Mossland {' '.join(parts)} Implementation"
             else:
-                title = f"Mossland 생태계 확장을 위한 {agent.role} 관점의 혁신 전략"
+                title = f"Mossland Ecosystem Innovation Strategy from {agent.role} Perspective"
 
             # Ensure minimum length
             if len(title) < 30:
-                title = f"{agent.name}의 Mossland 생태계 혁신 아이디어 - {agent.role} 전문가 제안"
+                title = f"Mossland Ecosystem Innovation Idea by {agent.name} - {agent.role} Expert Proposal"
 
         # Validate content and score title
         is_valid, validation_errors = self._validate_idea_content(content)
@@ -1366,11 +1369,11 @@ class MultiStageDebate:
             idea_id = idea.get("id", "")
             idea_title = idea.get("title", "")
 
-            # Look for patterns like "아이디어 1: 8점" or "점수: 7"
+            # Look for patterns like "Idea 1: 8 points" or "Score: 7"
             patterns = [
                 rf"{re.escape(idea_title)}[^0-9]*(\d+)",
-                rf"아이디어\s*\d+[^0-9]*(\d+)점",
-                rf"점수[:\s]*(\d+)",
+                rf"Idea\s*\d+[^0-9]*(\d+)\s*(?:points?)?",
+                rf"Score[:\s]*(\d+)",
             ]
 
             for pattern in patterns:

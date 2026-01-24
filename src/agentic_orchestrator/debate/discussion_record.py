@@ -106,9 +106,9 @@ class DiscussionRecordFormatter:
     """Formats debate records for GitHub comments."""
 
     TERMINATION_REASONS = {
-        "maximum_rounds_reached": "Maximum Rounds Reached / 최대 라운드 도달",
-        "founder_satisfied": "Founder Satisfied / 창업자 만족",
-        "all_approved": "All Approved / 전원 승인",
+        "maximum_rounds_reached": "Maximum Rounds Reached",
+        "founder_satisfied": "Founder Satisfied",
+        "all_approved": "All Approved",
     }
 
     PROVIDER_NAMES = {
@@ -118,10 +118,10 @@ class DiscussionRecordFormatter:
     }
 
     ROLE_NAMES = {
-        Role.FOUNDER: "Founder / 창업자",
+        Role.FOUNDER: "Founder",
         Role.VC: "VC",
         Role.ACCELERATOR: "Accelerator",
-        Role.FOUNDER_FRIEND: "Founder Friend / 창업가 친구",
+        Role.FOUNDER_FRIEND: "Founder Friend",
     }
 
     ROLE_NAMES_SHORT = {
@@ -142,15 +142,15 @@ class DiscussionRecordFormatter:
             Formatted markdown string for GitHub comment
         """
         lines = [
-            "# 🎭 PLAN Debate Record / 토론 기록",
+            "# 🎭 PLAN Debate Record",
             "",
-            f"**Idea Issue / 아이디어:** #{record.idea_issue_number}",
-            f"**Debate Rounds / 토론 라운드:** {record.total_rounds}",
-            f"**Termination Reason / 종료 사유:** {self.TERMINATION_REASONS.get(record.termination_reason, record.termination_reason)}",
+            f"**Idea Issue:** #{record.idea_issue_number}",
+            f"**Debate Rounds:** {record.total_rounds}",
+            f"**Termination Reason:** {self.TERMINATION_REASONS.get(record.termination_reason, record.termination_reason)}",
         ]
 
         if record.duration_minutes:
-            lines.append(f"**Total Duration / 총 소요시간:** {record.duration_minutes:.1f} min")
+            lines.append(f"**Total Duration:** {record.duration_minutes:.1f} min")
 
         lines.extend(["", "---", ""])
 
@@ -187,7 +187,7 @@ class DiscussionRecordFormatter:
         # Role assignment table
         lines.extend(
             [
-                "### Role Assignments / 역할 배정",
+                "### Role Assignments",
                 "| Role | AI |",
                 "|------|-----|",
             ]
@@ -204,9 +204,9 @@ class DiscussionRecordFormatter:
         if round_data.round_num == 1:
             lines.extend(
                 [
-                    "### 🚀 Initial Plan (Founder) / 초기 기획서 (창업자)",
+                    "### 🚀 Initial Plan (Founder)",
                     "<details>",
-                    "<summary>Click to expand / 펼쳐보기</summary>",
+                    "<summary>Click to expand</summary>",
                     "",
                     round_data.initial_plan,
                     "",
@@ -227,9 +227,9 @@ class DiscussionRecordFormatter:
         if round_data.updated_plan and round_data.updated_plan != round_data.initial_plan:
             lines.extend(
                 [
-                    "### 📝 Updated Plan / 업데이트된 기획서",
+                    "### 📝 Updated Plan",
                     "<details>",
-                    "<summary>Click to expand / 펼쳐보기</summary>",
+                    "<summary>Click to expand</summary>",
                     "",
                     round_data.updated_plan,
                     "",
@@ -247,9 +247,9 @@ class DiscussionRecordFormatter:
         provider_name = feedback.provider_display_name
 
         return [
-            f"### {emoji} {role_name} Feedback / 피드백 ({provider_name})",
+            f"### {emoji} {role_name} Feedback ({provider_name})",
             "<details>",
-            "<summary>Click to expand / 펼쳐보기</summary>",
+            "<summary>Click to expand</summary>",
             "",
             feedback.content,
             "",
@@ -260,32 +260,32 @@ class DiscussionRecordFormatter:
     def _format_founder_decision(self, decision: FounderDecision) -> list[str]:
         """Format founder's decision on feedback."""
         lines = [
-            "### 📋 Founder Decision / 창업자 결정",
+            "### 📋 Founder Decision",
             "",
         ]
 
         # Reflected feedback
         if decision.reflected:
-            lines.append("**Adopted Feedback / 반영한 피드백:**")
+            lines.append("**Adopted Feedback:**")
             for item in decision.reflected:
                 lines.append(f"- [{item.get('source', '')}] {item.get('content', '')}")
                 if item.get("reason"):
-                    lines.append(f"  - Reason / 이유: {item['reason']}")
+                    lines.append(f"  - Reason: {item['reason']}")
             lines.append("")
 
         # Not reflected feedback
         if decision.not_reflected:
-            lines.append("**Rejected Feedback / 미반영한 피드백:**")
+            lines.append("**Rejected Feedback:**")
             for item in decision.not_reflected:
                 lines.append(f"- [{item.get('source', '')}] {item.get('content', '')}")
                 if item.get("reason"):
-                    lines.append(f"  - Reason / 이유: {item['reason']}")
+                    lines.append(f"  - Reason: {item['reason']}")
             lines.append("")
 
         # Improvement status
         lines.extend(
             [
-                f"**Improvement Status / 개선 상태:** {decision.improvement_status}",
+                f"**Improvement Status:** {decision.improvement_status}",
                 "",
             ]
         )
@@ -295,24 +295,24 @@ class DiscussionRecordFormatter:
     def _format_summary(self, record: DebateRecord) -> list[str]:
         """Format the summary section."""
         lines = [
-            "## Final Result / 최종 결과",
+            "## Final Result",
             "",
         ]
 
         if record.completed_at:
             lines.append(
-                f"**Debate Completed / 토론 완료:** {record.completed_at.strftime('%Y-%m-%d %H:%M')}"
+                f"**Debate Completed:** {record.completed_at.strftime('%Y-%m-%d %H:%M')}"
             )
 
         if record.duration_minutes:
-            lines.append(f"**Total Duration / 총 소요시간:** {record.duration_minutes:.1f} min")
+            lines.append(f"**Total Duration:** {record.duration_minutes:.1f} min")
 
         reason_text = self.TERMINATION_REASONS.get(
             record.termination_reason, record.termination_reason
         )
         lines.extend(
             [
-                f"**Final Verdict / 최종 판정:** {reason_text}",
+                f"**Final Verdict:** {reason_text}",
                 "",
                 "---",
                 "*Generated by Agentic Orchestrator Multi-Agent Debate System*",

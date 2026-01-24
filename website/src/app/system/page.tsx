@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
-import { ApiClient, type ApiSignal, type StatusResponse, type SignalTimelineResponse } from '@/lib/api';
+import { ApiClient, type ApiSignal, type StatusResponse, type SignalTimelineResponse, type UsageResponse } from '@/lib/api';
 import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
 import { SignalTimeline } from '@/components/visualization/SignalTimeline';
+import { SignalSourceQuality } from '@/components/visualization/SignalSourceQuality';
+import { CostDashboard } from '@/components/visualization/CostDashboard';
 import { useModal } from '@/components/modals/useModal';
 
 type ViewMode = 'status' | 'signals' | 'tech';
@@ -22,12 +24,14 @@ export default function SystemPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [timelineData, setTimelineData] = useState<SignalTimelineResponse | null>(null);
   const [timelinePeriod, setTimelinePeriod] = useState<'24h' | '7d'>('24h');
+  const [usageData, setUsageData] = useState<UsageResponse | null>(null);
 
   useEffect(() => {
     async function fetchStatus() {
-      const [statusRes, timelineRes] = await Promise.all([
+      const [statusRes, timelineRes, usageRes] = await Promise.all([
         ApiClient.getStatus(),
         ApiClient.getSignalTimeline('24h'),
+        ApiClient.getUsage(30),
       ]);
 
       if (statusRes.data) {
@@ -35,6 +39,9 @@ export default function SystemPage() {
       }
       if (timelineRes.data) {
         setTimelineData(timelineRes.data);
+      }
+      if (usageRes.data) {
+        setUsageData(usageRes.data);
       }
       setLoading(false);
     }
@@ -72,9 +79,9 @@ export default function SystemPage() {
   }, [viewMode, signalFilter]);
 
   const tabs = [
-    { id: 'status' as const, label: 'System Status', icon: '🟢' },
-    { id: 'signals' as const, label: 'Signal Explorer', icon: '📡' },
-    { id: 'tech' as const, label: 'Tech Stack', icon: '🔧' },
+    { id: 'status' as const, labelKey: 'system.tab.status', icon: '🟢' },
+    { id: 'signals' as const, labelKey: 'system.tab.signals', icon: '📡' },
+    { id: 'tech' as const, labelKey: 'system.tab.tech', icon: '🔧' },
   ];
 
   const techStack = [
@@ -101,10 +108,10 @@ export default function SystemPage() {
           className="mb-8"
         >
           <h1 className="text-2xl font-bold text-[#00ffff] mb-2">
-            System Overview
+            {t('system.pageTitle')}
           </h1>
           <p className="text-sm text-[#6b7280]">
-            Monitor system health, explore raw signals, and view technical details
+            {t('system.pageSubtitle')}
           </p>
         </motion.div>
 
@@ -123,7 +130,7 @@ export default function SystemPage() {
               `}
             >
               <span>{tab.icon}</span>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -135,7 +142,7 @@ export default function SystemPage() {
             <TerminalWindow title="COMPONENT_HEALTH" className="mb-6">
               {loading ? (
                 <div className="text-center py-8 text-[#00ffff] animate-pulse">
-                  Checking system status...
+                  {t('system.checkingStatus')}
                 </div>
               ) : status ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -229,6 +236,13 @@ export default function SystemPage() {
               )}
             </TerminalWindow>
 
+            {/* Cost Dashboard */}
+            {usageData && (
+              <TerminalWindow title="API_COST" className="mb-6">
+                <CostDashboard usage={usageData} showDetails={true} />
+              </TerminalWindow>
+            )}
+
             {/* Pipeline */}
             <TerminalWindow title="PIPELINE_STAGES">
               <div className="flex flex-wrap gap-2 py-4">
@@ -266,30 +280,37 @@ export default function SystemPage() {
         {/* Signals View */}
         {viewMode === 'signals' && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            {/* Signal Source Quality */}
+            {signals.length > 0 && (
+              <TerminalWindow title="SOURCE_QUALITY" className="mb-6">
+                <SignalSourceQuality signals={signals} showDetails={true} />
+              </TerminalWindow>
+            )}
+
             {/* Filters */}
             <TerminalWindow title="FILTERS" className="mb-6">
               <div className="flex flex-wrap gap-4">
                 <div>
-                  <label className="text-xs text-[#6b7280] block mb-1">Source</label>
+                  <label className="text-xs text-[#6b7280] block mb-1">{t('system.filter.source')}</label>
                   <select
                     value={signalFilter.source || ''}
                     onChange={(e) => setSignalFilter({ ...signalFilter, source: e.target.value || undefined })}
                     className="input-cli text-sm"
                   >
-                    <option value="">All Sources</option>
+                    <option value="">{t('system.filter.allSources')}</option>
                     {sources.map(source => (
                       <option key={source} value={source}>{source}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs text-[#6b7280] block mb-1">Category</label>
+                  <label className="text-xs text-[#6b7280] block mb-1">{t('system.filter.category')}</label>
                   <select
                     value={signalFilter.category || ''}
                     onChange={(e) => setSignalFilter({ ...signalFilter, category: e.target.value || undefined })}
                     className="input-cli text-sm"
                   >
-                    <option value="">All Categories</option>
+                    <option value="">{t('system.filter.allCategories')}</option>
                     {categories.map(category => (
                       <option key={category} value={category}>{category}</option>
                     ))}
@@ -302,7 +323,7 @@ export default function SystemPage() {
             <TerminalWindow title={`RAW_SIGNALS (${signals.length})`}>
               {signals.length === 0 ? (
                 <div className="text-center py-12 text-[#6b7280]">
-                  No signals found
+                  {t('system.noSignals')}
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[600px] overflow-y-auto">
@@ -376,7 +397,7 @@ export default function SystemPage() {
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
                 </svg>
-                View Source Code
+                {t('system.viewSourceCode')}
               </a>
             </motion.div>
           </motion.div>

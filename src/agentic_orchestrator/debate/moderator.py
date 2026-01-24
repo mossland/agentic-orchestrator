@@ -102,8 +102,6 @@ class DebateModerator:
         "INVEST",
         "STRONG FIT",
         "APPROVED",
-        "승인",
-        "투자",
     ]
 
     def __init__(
@@ -223,7 +221,7 @@ class DebateModerator:
         lines = [
             f"## Round {round_num}",
             "",
-            "### Role Assignments / 역할 배정",
+            "### Role Assignments",
             "| Role | AI |",
             "|------|-----|",
         ]
@@ -252,21 +250,17 @@ class DebateModerator:
         """Get a human-readable message for termination reason."""
         messages = {
             "maximum_rounds_reached": (
-                f"Debate ended: reached maximum rounds ({self.max_rounds}).\n"
-                f"토론 종료: 최대 라운드({self.max_rounds}회)에 도달."
+                f"Debate ended: reached maximum rounds ({self.max_rounds})."
             ),
             "founder_satisfied": (
-                "Debate ended: founder determined sufficient improvement.\n"
-                "토론 종료: 창업자가 충분히 개선되었다고 판단."
+                "Debate ended: founder determined sufficient improvement."
             ),
             "all_approved": (
-                "Debate ended: all feedback providers approved.\n"
-                "토론 종료: 모든 피드백 제공자가 승인."
+                "Debate ended: all feedback providers approved."
             ),
             "minimum_rounds_not_reached": (
-                f"Continuing: minimum rounds ({self.min_rounds}) not yet reached.\n"
-                f"계속 진행: 최소 라운드({self.min_rounds}회)에 미달."
+                f"Continuing: minimum rounds ({self.min_rounds}) not yet reached."
             ),
-            "continue": "Continuing debate.\n토론 계속 진행.",
+            "continue": "Continuing debate.",
         }
         return messages.get(reason, f"Debate status: {reason}")

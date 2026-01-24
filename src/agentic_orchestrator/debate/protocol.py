@@ -175,61 +175,61 @@ class DebateProtocol:
     SCAMPER_TECHNIQUES = {
         1: {
             "name": "Substitute & Combine",
-            "description": "대체(Substitute)와 결합(Combine) 기법",
-            "prompt": """### 창의성 기법: 대체(Substitute) & 결합(Combine)
+            "description": "Substitute and Combine techniques",
+            "prompt": """### Creativity Technique: Substitute & Combine
 
-**대체(Substitute)**: 기존 솔루션의 구성 요소를 다른 것으로 대체해보세요.
-- 기존 기술을 AI/블록체인으로 대체하면?
-- 중앙화된 요소를 탈중앙화로 대체하면?
-- 수동 프로세스를 자동화로 대체하면?
+**Substitute**: Replace components of existing solutions with something else.
+- What if we replace existing technology with AI/blockchain?
+- What if we replace centralized elements with decentralization?
+- What if we replace manual processes with automation?
 
-**결합(Combine)**: 서로 다른 개념/기술/시장을 결합해보세요.
+**Combine**: Merge different concepts/technologies/markets.
 - DeFi + GameFi = ?
-- NFT + 실물자산 = ?
-- AI 에이전트 + DAO 거버넌스 = ?
+- NFT + Real-world assets = ?
+- AI Agents + DAO Governance = ?
 
-💡 예시: "스마트 컨트랙트 + 보험 + AI 심사 = 자동 보험금 지급 시스템"
+💡 Example: "Smart Contract + Insurance + AI Underwriting = Automatic Insurance Claim Payment System"
 """,
         },
         2: {
             "name": "Adapt & Modify",
-            "description": "적용(Adapt)과 수정(Modify) 기법",
-            "prompt": """### 창의성 기법: 적용(Adapt) & 수정(Modify)
+            "description": "Adapt and Modify techniques",
+            "prompt": """### Creativity Technique: Adapt & Modify
 
-**적용(Adapt)**: 다른 산업/분야의 성공 사례를 Web3에 적용해보세요.
-- Uber의 매칭 시스템을 DeFi에 적용하면?
-- Netflix 추천 알고리즘을 NFT 마켓에 적용하면?
-- 게임의 길드 시스템을 DAO에 적용하면?
+**Adapt**: Apply success stories from other industries to Web3.
+- What if we apply Uber's matching system to DeFi?
+- What if we apply Netflix's recommendation algorithm to NFT marketplaces?
+- What if we apply gaming guild systems to DAOs?
 
-**수정(Modify)**: 기존 아이디어의 규모, 형태, 속성을 변경해보세요.
-- 마이크로 단위로 축소하면? (마이크로 대출, 마이크로 투자)
-- 글로벌 규모로 확대하면?
-- 실시간으로 변경하면?
+**Modify**: Change the scale, form, or attributes of existing ideas.
+- What if we shrink to micro-scale? (micro-loans, micro-investments)
+- What if we scale to global level?
+- What if we make it real-time?
 
-💡 예시: "Airbnb + 메타버스 = 가상 부동산 임대 플랫폼"
+💡 Example: "Airbnb + Metaverse = Virtual Real Estate Rental Platform"
 """,
         },
         3: {
             "name": "Put to Other Use & Eliminate & Reverse",
-            "description": "전용(Put to other use), 제거(Eliminate), 역발상(Reverse) 기법",
-            "prompt": """### 창의성 기법: 전용(Put to Other Use) & 제거(Eliminate) & 역발상(Reverse)
+            "description": "Put to Other Use, Eliminate, and Reverse techniques",
+            "prompt": """### Creativity Technique: Put to Other Use & Eliminate & Reverse
 
-**전용(Put to Other Use)**: 기존 기술/자산의 새로운 용도를 찾아보세요.
-- NFT를 예술품 외에 어디에 활용할 수 있을까?
-- DeFi 프로토콜을 금융 외 분야에 적용하면?
-- 토큰을 투자 외 목적으로 사용하면?
+**Put to Other Use**: Find new applications for existing technologies/assets.
+- Where else can NFTs be used besides art?
+- How can DeFi protocols be applied outside of finance?
+- What if tokens are used for purposes other than investment?
 
-**제거(Eliminate)**: 불필요한 요소를 제거해 단순화하세요.
-- 중개자를 제거하면?
-- KYC를 제거하면서 규제를 준수할 방법은?
-- 가스비를 제거하는 방법은?
+**Eliminate**: Simplify by removing unnecessary elements.
+- What if we eliminate intermediaries?
+- How can we remove KYC while maintaining regulatory compliance?
+- How can we eliminate gas fees?
 
-**역발상(Reverse)**: 반대로 생각해보세요.
-- 사용자가 플랫폼에 지불하는 대신, 플랫폼이 사용자에게 지불하면?
-- 유동성을 공급하는 대신, 유동성을 소비하면?
-- 토큰을 발행하는 대신, 소각을 장려하면?
+**Reverse**: Think in the opposite direction.
+- What if the platform pays users instead of users paying the platform?
+- What if we consume liquidity instead of providing it?
+- What if we incentivize burning tokens instead of minting?
 
-💡 예시: "역경매 + NFT = 구매자가 가격을 제시하는 NFT 마켓플레이스"
+💡 Example: "Reverse Auction + NFT = NFT Marketplace Where Buyers Set Prices"
 """,
         },
     }
@@ -238,47 +238,47 @@ class DebateProtocol:
     LATERAL_THINKING = {
         1: {
             "name": "Blue Sky Thinking",
-            "description": "제약 없는 자유로운 상상",
-            "prompt": """### 측면사고 기법: Blue Sky Thinking (제약 없는 상상)
+            "description": "Unconstrained imaginative thinking",
+            "prompt": """### Lateral Thinking Technique: Blue Sky Thinking
 
-모든 제약을 잊고 자유롭게 상상해보세요:
-- 무한한 자금이 있다면 무엇을 만들겠습니까?
-- 기술적 제한이 없다면 어떤 솔루션이 가능할까요?
-- 규제가 완전히 지지하는 환경이라면?
-- 모든 사용자가 Web3에 익숙하다면?
+Forget all constraints and imagine freely:
+- What would you build with unlimited funding?
+- What solutions would be possible without technical limitations?
+- What if regulations fully supported your vision?
+- What if all users were familiar with Web3?
 
-⚠️ 이번 라운드에서는 "불가능하다"는 생각을 배제하세요.
+⚠️ In this round, dismiss any thoughts of "it's impossible."
 """,
         },
         2: {
             "name": "Paradox Approach",
-            "description": "역설적 접근으로 새로운 관점 발견",
-            "prompt": """### 측면사고 기법: Paradox Approach (역설적 접근)
+            "description": "Finding new perspectives through paradoxical thinking",
+            "prompt": """### Lateral Thinking Technique: Paradox Approach
 
-반대로 생각해서 새로운 인사이트를 얻어보세요:
-- 문제를 해결하는 대신 "문제를 악화시키려면?"이라고 물어보세요
-- 수익을 내는 대신 "어떻게 하면 돈을 잃을까?"를 생각해보세요
-- 사용자를 늘리는 대신 "어떻게 하면 사용자가 떠날까?"를 고민해보세요
+Think in reverse to gain new insights:
+- Instead of solving the problem, ask "How would we make the problem worse?"
+- Instead of making profit, think "How would we lose money?"
+- Instead of increasing users, consider "How would we make users leave?"
 
-역설에서 얻은 인사이트를 뒤집어 실제 해결책을 도출하세요.
+Flip the insights from these paradoxes to derive real solutions.
 """,
         },
         3: {
             "name": "Cross-Domain Innovation",
-            "description": "다른 산업에서 아이디어 빌려오기",
-            "prompt": """### 측면사고 기법: Cross-Domain Innovation (교차 영역 혁신)
+            "description": "Borrowing ideas from other industries",
+            "prompt": """### Lateral Thinking Technique: Cross-Domain Innovation
 
-전혀 다른 산업/분야의 성공 패턴을 Web3에 적용해보세요:
+Apply success patterns from completely different industries to Web3:
 
-**참고할 산업들:**
-- 🎮 게임: 레벨업, 퀘스트, 길드, 시즌패스
-- 🏥 헬스케어: 예방, 모니터링, 개인화
-- 🚗 모빌리티: 공유경제, 자율주행, MaaS
-- 🎵 엔터테인먼트: 스트리밍, 팬덤, 크리에이터 경제
-- 🏭 제조: 린 생산, JIT, 품질관리
-- 📚 교육: 게이미피케이션, 마이크로러닝, 인증
+**Industries to Reference:**
+- 🎮 Gaming: Level-ups, Quests, Guilds, Season Passes
+- 🏥 Healthcare: Prevention, Monitoring, Personalization
+- 🚗 Mobility: Sharing Economy, Autonomous Driving, MaaS
+- 🎵 Entertainment: Streaming, Fandoms, Creator Economy
+- 🏭 Manufacturing: Lean Production, JIT, Quality Control
+- 📚 Education: Gamification, Micro-learning, Credentials
 
-"[산업X]의 [패턴Y]를 Mossland에 적용하면..." 형식으로 아이디어를 제시하세요.
+Present ideas in the format: "Applying [Pattern Y] from [Industry X] to Mossland would..."
 """,
         },
     }
@@ -367,7 +367,7 @@ class DebateProtocol:
         if not votes:
             return False
 
-        approvals = sum(1 for v in votes if "approve" in v.content.lower() or "찬성" in v.content)
+        approvals = sum(1 for v in votes if "approve" in v.content.lower())
         total = len(votes)
 
         if self.config.require_unanimous_approval:
@@ -420,98 +420,99 @@ class DebateProtocol:
         if previous_ideas:
             # Calculate Jaccard similarity hints for novelty
             previous_section = f"""
-이전 라운드에서 제안된 아이디어들:
+Ideas proposed in previous rounds:
 {chr(10).join(f"- {idea}" for idea in previous_ideas[:10])}
 
-⚠️ 위 아이디어들과 **확실히 다른** 새로운 관점을 제시해주세요.
-- 유사한 아이디어는 낮은 점수를 받습니다
-- 완전히 새로운 접근법을 시도하세요
+⚠️ Please present a **clearly different** new perspective from the ideas above.
+- Similar ideas will receive lower scores
+- Try completely new approaches
 """
 
-        return f"""당신은 다음과 같은 성향을 가진 전문가입니다:
+        return f"""You are an expert with the following characteristics:
 {personality_desc}
 
-## 토론 주제
+## Discussion Topic
 {topic}
 
-## 배경 정보
+## Background Information
 {context}
 
 {previous_section}
 
 {creativity_prompt}
 
-## 지시사항
-당신의 성향과 전문성을 바탕으로 이 주제에 대한 **구체적이고 실행 가능한 아이디어**를 제시해주세요.
-위의 창의성 기법을 활용하여 기존과 다른 참신한 아이디어를 도출하세요.
+## Instructions
+Based on your characteristics and expertise, please present **specific and actionable ideas** on this topic.
+Use the creativity techniques above to derive novel ideas that differ from existing ones.
 
-### 아이디어 작성 규칙 (반드시 준수)
+### Idea Writing Rules (Must Follow)
 
-**제목 규칙:**
-- 반드시 `## 아이디어: [제목]` 형식으로 시작하세요
-- 제목은 최소 30자 이상, 구체적이고 설명적으로 작성
-- 나쁜 예: "AI 활용 서비스", "토큰 이코노미 개선"
-- 좋은 예: "GPT-5 기반 DeFi 포지션 자동 리밸런싱 에이전트 개발", "Mossland NFT 홀더를 위한 실시간 메타버스 자산 가치 트래커"
+**Title Rules:**
+- Must start with `## Idea: [Title]` format
+- Title must be at least 30 characters, specific and descriptive
+- Bad examples: "AI-based Service", "Token Economy Improvement"
+- Good examples: "GPT-5 Based DeFi Position Auto-Rebalancing Agent Development", "Real-time Metaverse Asset Value Tracker for Mossland NFT Holders"
 
-**내용 규칙:**
-각 아이디어에 대해 다음 섹션을 **반드시 포함**하세요:
+**Content Rules:**
+Each idea must **include** the following sections:
 
-1. **핵심 분석** (100자 이상)
-   - 현재 시장/기술 상황 분석
-   - 왜 지금 이 아이디어가 필요한지 구체적 근거
+1. **Core Analysis** (100+ characters)
+   - Current market/technology situation analysis
+   - Specific reasons why this idea is needed now
 
-2. **기회 또는 리스크** (150자 이상)
-   - 정량적 데이터나 구체적 사례 포함
-   - 경쟁 서비스와의 차별점
+2. **Opportunity or Risk** (150+ characters)
+   - Include quantitative data or specific examples
+   - Differentiation from competitive services
 
-3. **구체적 제안** (200자 이상)
-   - 핵심 기능 3-5개 나열
-   - 기술 스택 제안 (예: Next.js, Solidity, Python 등)
-   - MVP 범위 정의
+3. **Specific Proposal** (200+ characters)
+   - List 3-5 core features
+   - Suggest tech stack (e.g., Next.js, Solidity, Python, etc.)
+   - Define MVP scope
 
-4. **실행 로드맵** (100자 이상)
-   - 1주차, 2주차 등 구체적 일정
-   - 필요 리소스 (개발자 수, 예상 비용 등)
+4. **Execution Roadmap** (100+ characters)
+   - Specific schedule like Week 1, Week 2
+   - Required resources (number of developers, estimated cost, etc.)
 
-5. **성공 지표**
-   - 측정 가능한 KPI 2-3개
-   - 목표 수치 포함 (예: "출시 1개월 내 DAU 500명")
+5. **Success Metrics**
+   - 2-3 measurable KPIs
+   - Include target numbers (e.g., "500 DAU within 1 month of launch")
 
-당신의 전문성이 드러나는 깊이 있는 분석과 제안을 해주세요.
-라운드 {round_num}의 발언입니다.
+Please provide in-depth analysis and proposals that showcase your expertise.
+This is Round {round_num} statement.
 
 ---
 
-### 📝 출력 형식 (아래 JSON 구조를 반드시 사용하세요)
+### 📝 Output Format (You MUST use the JSON structure below)
 
 ```json
 {{
-  "idea_title": "30자 이상의 구체적인 제목 (기술명, 프로젝트명, 수치 포함 필수)",
-  "core_analysis": "현재 시장/기술 상황 분석 (100자 이상)",
+  "idea_title": "Specific title of 30+ characters (must include tech names, project names, numbers)",
+  "core_analysis": "Current market/technology situation analysis (100+ characters)",
   "opportunity_risk": {{
-    "opportunities": "기회 요인 (100자 이상, 정량적 데이터 포함)",
-    "risks": "리스크 요인 (50자 이상)",
-    "differentiators": "경쟁 서비스 대비 차별점"
+    "opportunities": "Opportunity factors (100+ characters, include quantitative data)",
+    "risks": "Risk factors (50+ characters)",
+    "differentiators": "Differentiation from competitive services"
   }},
   "proposal": {{
-    "description": "구체적 제안 설명 (200자 이상)",
-    "core_features": ["핵심 기능 1", "핵심 기능 2", "핵심 기능 3"],
+    "description": "Specific proposal description (200+ characters)",
+    "core_features": ["Core Feature 1", "Core Feature 2", "Core Feature 3"],
     "tech_stack": ["React/Next.js", "Python/FastAPI", "Solidity"],
-    "mvp_scope": "MVP 범위 정의"
+    "mvp_scope": "MVP scope definition"
   }},
   "roadmap": {{
-    "week1": "1주차 계획",
-    "week2": "2주차 계획",
-    "resources": "필요 리소스 (개발자 수, 예상 비용)"
+    "week1": "Week 1 plan",
+    "week2": "Week 2 plan",
+    "resources": "Required resources (number of developers, estimated cost)"
   }},
   "kpis": [
-    {{"metric": "DAU", "target": "500명", "measurement": "Analytics 대시보드"}},
-    {{"metric": "거래량", "target": "$10,000/일", "measurement": "On-chain 데이터"}}
+    {{"metric": "DAU", "target": "500 users", "measurement": "Analytics dashboard"}},
+    {{"metric": "Transaction Volume", "target": "$10,000/day", "measurement": "On-chain data"}}
   ]
 }}
 ```
 
-⚠️ **중요**: 위 JSON 형식을 정확히 따라야 합니다. 형식이 맞지 않으면 아이디어가 저장되지 않습니다.
+⚠️ **IMPORTANT**: You must follow the JSON format exactly. Ideas will not be saved if the format is incorrect.
+**IMPORTANT**: All content must be written in English.
 """
 
     def create_convergence_prompt(
@@ -527,84 +528,85 @@ class DebateProtocol:
         ideas_section = ""
         for i, idea in enumerate(ideas, 1):
             ideas_section += f"""
-### 아이디어 {i}: {idea.get('title', 'Untitled')}
-제안자: {idea.get('agent', 'Unknown')}
-내용: {idea.get('content', '')}
-점수: {idea.get('score', 'N/A')}
+### Idea {i}: {idea.get('title', 'Untitled')}
+Proposer: {idea.get('agent', 'Unknown')}
+Content: {idea.get('content', '')}
+Score: {idea.get('score', 'N/A')}
 """
 
-        return f"""당신은 다음과 같은 성향을 가진 평가 전문가입니다:
+        return f"""You are an evaluation expert with the following characteristics:
 {personality_desc}
 
-## 토론 주제
+## Discussion Topic
 {topic}
 
-## 평가할 아이디어들
+## Ideas to Evaluate
 {ideas_section}
 
-## 평가 기준 (가중치 적용 - 각 항목에 대해 상세한 평가 근거 작성 필수)
+## Evaluation Criteria (Weighted - Detailed evaluation basis required for each item)
 
-**가중치 배분:**
-- 실현 가능성: 25%
-- Mossland 관련성: 20%
-- **참신성: 30%** ⬆️ (가장 중요 - 기존 솔루션과의 차별화)
-- 영향력: 15%
-- 시급성: 10%
+**Weight Distribution:**
+- Feasibility: 25%
+- Mossland Relevance: 20%
+- **Novelty: 30%** ⬆️ (Most important - differentiation from existing solutions)
+- Impact: 15%
+- Urgency: 10%
 
-1. **실현 가능성** (1-10, 가중치 25%)
-   - 1-2주 내 MVP 구현 가능성
-   - 필요한 기술 스택의 성숙도
-   - 팀 역량 대비 복잡도
+1. **Feasibility** (1-10, weight 25%)
+   - Possibility of MVP implementation within 1-2 weeks
+   - Maturity of required tech stack
+   - Complexity relative to team capabilities
 
-2. **Mossland 관련성** (1-10, 가중치 20%)
-   - Mossland 생태계 내 시너지 효과
-   - MOC 토큰 또는 NFT 활용
-   - 커뮤니티 가치 창출
+2. **Mossland Relevance** (1-10, weight 20%)
+   - Synergy effects within Mossland ecosystem
+   - Use of MOC token or NFT
+   - Community value creation
 
-3. **참신성** (1-10, 가중치 30%) ⭐ 핵심 기준
-   - 기존 시장 솔루션 대비 차별점
-   - 기술적 새로움
-   - 비즈니스 모델 혁신성
-   - ⚠️ 유사한 아이디어가 이미 있다면 낮은 점수
-   - 💡 완전히 새로운 접근 방식이면 높은 점수
+3. **Novelty** (1-10, weight 30%) ⭐ Key criterion
+   - Differentiation from existing market solutions
+   - Technical newness
+   - Business model innovation
+   - ⚠️ Lower score if similar idea already exists
+   - 💡 Higher score for completely new approaches
 
-4. **영향력** (1-10, 가중치 15%)
-   - 신규 사용자 유입 잠재력
-   - 수익 모델 가능성
-   - 바이럴 성장 가능성
+4. **Impact** (1-10, weight 15%)
+   - Potential for new user acquisition
+   - Revenue model possibility
+   - Viral growth potential
 
-5. **시급성** (1-10, 가중치 10%)
-   - 시장 타이밍
-   - 경쟁사 동향
-   - Mossland 로드맵 적합성
+5. **Urgency** (1-10, weight 10%)
+   - Market timing
+   - Competitor trends
+   - Mossland roadmap fit
 
-## 지시사항
+## Instructions
 
-### 각 아이디어별 상세 평가 (반드시 작성)
+### Detailed Evaluation for Each Idea (Required)
 ```
-### 아이디어 N: [제목]
-- 실현 가능성: X/10 - [구체적 근거 50자 이상]
-- 영향력: X/10 - [구체적 근거 50자 이상]
-- 혁신성: X/10 - [구체적 근거 50자 이상]
-- 리스크: X/10 - [구체적 근거 50자 이상]
-- 시급성: X/10 - [구체적 근거 50자 이상]
-- **총점**: XX/50
-```
-
-### 최종 분석
-1. **상위 3개 아이디어** 선정 및 선정 이유 (각 100자 이상)
-   - 참신성(30% 가중치)을 특히 중요하게 평가하세요
-2. **유사 아이디어 통합 방안** (있는 경우)
-   - 중복되는 아이디어는 과감히 병합하거나 낮은 점수 부여
-3. **최종 추천**: 1개 아이디어와 추천 이유 (150자 이상)
-   - 가장 참신하면서도 실현 가능한 아이디어 선택
-
-### 가중치 점수 계산
-```
-최종점수 = (실현가능성 × 0.25) + (관련성 × 0.20) + (참신성 × 0.30) + (영향력 × 0.15) + (시급성 × 0.10)
+### Idea N: [Title]
+- Feasibility: X/10 - [specific basis, 50+ characters]
+- Impact: X/10 - [specific basis, 50+ characters]
+- Innovation: X/10 - [specific basis, 50+ characters]
+- Risk: X/10 - [specific basis, 50+ characters]
+- Urgency: X/10 - [specific basis, 50+ characters]
+- **Total Score**: XX/50
 ```
 
-라운드 {round_num}의 평가입니다. 참신성을 가장 중요하게 평가해주세요.
+### Final Analysis
+1. **Top 3 Ideas** selection and reasons (100+ characters each)
+   - Evaluate novelty (30% weight) with particular importance
+2. **Similar Idea Consolidation Plan** (if applicable)
+   - Boldly merge or give lower scores to duplicate ideas
+3. **Final Recommendation**: 1 idea and reason (150+ characters)
+   - Select the most novel yet feasible idea
+
+### Weighted Score Calculation
+```
+Final Score = (Feasibility × 0.25) + (Relevance × 0.20) + (Novelty × 0.30) + (Impact × 0.15) + (Urgency × 0.10)
+```
+
+This is Round {round_num} evaluation. Please evaluate novelty as the most important criterion.
+**IMPORTANT**: All content must be written in English.
 """
 
     def create_planning_prompt(
@@ -625,93 +627,95 @@ class DebateProtocol:
         )
 
         if draft_plan:
-            return f"""당신은 {agent_expertise} 전문가로서 다음과 같은 성향을 가지고 있습니다:
+            return f"""You are an expert in {agent_expertise} with the following personality traits:
 {personality_desc}
 
-## 토론 주제
+## Discussion Topic
 {topic}
 
-## 현재 기획안 초안
+## Current Draft Plan
 {draft_plan}
 
-## 지시사항
-{agent_expertise}의 관점에서 이 기획안을 검토하고 피드백을 제공하세요:
+## Instructions
+From the perspective of {agent_expertise}, review this plan and provide feedback:
 
-1. **강점**: 이 기획안의 좋은 점
-2. **약점**: 개선이 필요한 부분
-3. **리스크**: 예상되는 위험 요소
-4. **구체적 제안**: 어떻게 개선할 수 있는가?
+1. **Strengths**: What's good about this plan
+2. **Weaknesses**: Areas that need improvement
+3. **Risks**: Expected risk factors
+4. **Specific Suggestions**: How can this be improved?
 
-최종적으로 이 기획안을 [승인/수정요청/반대] 중 하나로 판단해주세요.
-라운드 {round_num}의 검토입니다.
+Finally, judge this plan as one of [Approved/Needs Revision/Rejected].
+This is Round {round_num} review.
+**IMPORTANT**: All content must be written in English.
 """
         else:
-            return f"""당신은 {agent_expertise} 전문가로서 다음과 같은 성향을 가지고 있습니다:
+            return f"""You are an expert in {agent_expertise} with the following personality traits:
 {personality_desc}
 
-## 토론 주제
+## Discussion Topic
 {topic}
 
-## 선정된 아이디어들
+## Selected Ideas
 {ideas_section}
 
-## 지시사항
-위 아이디어들을 바탕으로 **상세하고 실행 가능한 기획안**을 작성하세요.
+## Instructions
+Based on the above ideas, create a **detailed and actionable implementation plan**.
 
-### 기획안 작성 규칙 (반드시 준수)
+### Plan Writing Rules (Must Follow)
 
-**프로젝트 제목 규칙:**
-- 제목은 최소 30자 이상, 프로젝트의 핵심 가치를 담아야 함
-- 나쁜 예: "DeFi 도구", "NFT 플랫폼"
-- 좋은 예: "Mossland 생태계 연동 AI 기반 DeFi 포트폴리오 자동 리밸런싱 시스템"
+**Project Title Rules:**
+- Title must be at least 30 characters, capturing the core value of the project
+- Bad example: "DeFi Tool", "NFT Platform"
+- Good example: "AI-Powered DeFi Portfolio Auto-Rebalancing System Integrated with Mossland Ecosystem"
 
 ---
 
-### 1. 프로젝트 개요 (상세히 작성)
-- **프로젝트 명**: [구체적이고 설명적인 이름]
-- **한 줄 설명**: [50자 이내로 핵심 가치 설명]
-- **목표**: [달성하고자 하는 구체적 목표 3개 이상]
-- **대상 사용자**: [누가 사용할 것인지, 예상 사용자 수]
-- **예상 기간**: [총 개발 기간, MVP vs 풀버전]
-- **예상 비용**: [인건비, 인프라 비용 등]
+### 1. Project Overview (Write in Detail)
+- **Project Name**: [Specific and descriptive name]
+- **One-line Description**: [Core value explained in under 50 characters]
+- **Goals**: [At least 3 specific goals to achieve]
+- **Target Users**: [Who will use this, expected number of users]
+- **Estimated Duration**: [Total development period, MVP vs full version]
+- **Estimated Cost**: [Labor costs, infrastructure costs, etc.]
 
-### 2. 기술 아키텍처
-- **프론트엔드**: [React/Next.js/Vue 등 + 선택 이유]
-- **백엔드**: [Python/Node.js 등 + 선택 이유]
-- **데이터베이스**: [PostgreSQL/MongoDB 등 + 선택 이유]
-- **블록체인 연동**: [어떤 체인, 어떤 프로토콜]
-- **외부 API**: [사용할 외부 서비스]
-- **시스템 아키텍처 다이어그램**: [텍스트로 간단히 설명]
+### 2. Technical Architecture
+- **Frontend**: [React/Next.js/Vue etc. + reason for choice]
+- **Backend**: [Python/Node.js etc. + reason for choice]
+- **Database**: [PostgreSQL/MongoDB etc. + reason for choice]
+- **Blockchain Integration**: [Which chain, which protocol]
+- **External APIs**: [External services to be used]
+- **System Architecture Diagram**: [Brief text description]
 
-### 3. 상세 실행 계획
+### 3. Detailed Execution Plan
 
-#### Week 1: 기반 구축
-- [ ] Task 1: [구체적인 작업 내용]
-- [ ] Task 2: [구체적인 작업 내용]
-- **마일스톤**: [이 주차 완료 조건]
+#### Week 1: Foundation Setup
+- [ ] Task 1: [Specific task description]
+- [ ] Task 2: [Specific task description]
+- **Milestone**: [Completion criteria for this week]
 
-#### Week 2: 핵심 기능 개발
-- [ ] Task 1: [구체적인 작업 내용]
-- [ ] Task 2: [구체적인 작업 내용]
-- **마일스톤**: [이 주차 완료 조건]
+#### Week 2: Core Feature Development
+- [ ] Task 1: [Specific task description]
+- [ ] Task 2: [Specific task description]
+- **Milestone**: [Completion criteria for this week]
 
-### 4. 리스크 관리
-| 리스크 | 발생 확률 | 영향도 | 대응 방안 |
-|--------|----------|--------|----------|
-| [구체적 리스크] | 높음/중간/낮음 | 상/중/하 | [대응책] |
+### 4. Risk Management
+| Risk | Probability | Impact | Mitigation Strategy |
+|------|-------------|--------|---------------------|
+| [Specific risk] | High/Medium/Low | High/Medium/Low | [Response plan] |
 
-### 5. 성과 지표 (KPI)
-| 지표 | 목표 | 측정 방법 | 측정 주기 |
-|------|------|----------|----------|
-| DAU | 500명 | Analytics | 일간 |
-| 거래량 | $10,000/일 | On-chain 데이터 | 일간 |
+### 5. Key Performance Indicators (KPIs)
+| Metric | Target | Measurement Method | Measurement Frequency |
+|--------|--------|-------------------|----------------------|
+| DAU | 500 users | Analytics | Daily |
+| Trading Volume | $10,000/day | On-chain data | Daily |
 
-### 6. 향후 확장 계획
-- Phase 2 기능: [...]
-- 장기 비전: [...]
+### 6. Future Expansion Plans
+- Phase 2 Features: [...]
+- Long-term Vision: [...]
 
-당신의 전문성({agent_expertise})이 드러나는 깊이 있고 실행 가능한 기획안을 작성하세요.
-라운드 {round_num}의 기획입니다.
+Write an in-depth and actionable plan that showcases your expertise in {agent_expertise}.
+This is Round {round_num} planning.
+**IMPORTANT**: All content must be written in English.
 """
 
     def format_debate_summary(
@@ -721,52 +725,52 @@ class DebateProtocol:
     ) -> str:
         """Format complete debate summary."""
         summary_parts = [
-            "# 멀티 에이전트 토론 결과",
+            "# Multi-Agent Debate Results",
             "",
-            f"생성 시간: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
+            f"Generated at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}",
             "",
         ]
 
         # Phase summaries
         for result in phase_results:
             phase_name = {
-                DebatePhase.DIVERGENCE: "발산 단계 (Divergence)",
-                DebatePhase.CONVERGENCE: "수렴 단계 (Convergence)",
-                DebatePhase.PLANNING: "기획 단계 (Planning)",
+                DebatePhase.DIVERGENCE: "Divergence Phase",
+                DebatePhase.CONVERGENCE: "Convergence Phase",
+                DebatePhase.PLANNING: "Planning Phase",
             }.get(result.phase, result.phase.value)
 
             summary_parts.append(f"## {phase_name}")
-            summary_parts.append(f"- 라운드 수: {len(result.rounds)}")
-            summary_parts.append(f"- 소요 시간: {result.duration_seconds:.1f}초")
-            summary_parts.append(f"- 토큰 사용량: {result.total_tokens:,}")
-            summary_parts.append(f"- 비용: ${result.total_cost:.4f}")
+            summary_parts.append(f"- Rounds: {len(result.rounds)}")
+            summary_parts.append(f"- Duration: {result.duration_seconds:.1f}s")
+            summary_parts.append(f"- Tokens Used: {result.total_tokens:,}")
+            summary_parts.append(f"- Cost: ${result.total_cost:.4f}")
             summary_parts.append("")
 
             if result.output:
                 if result.phase == DebatePhase.DIVERGENCE:
                     ideas = result.output.get("ideas", [])
-                    summary_parts.append(f"### 생성된 아이디어: {len(ideas)}개")
+                    summary_parts.append(f"### Ideas Generated: {len(ideas)}")
                     for idea in ideas[:5]:
                         summary_parts.append(f"- {idea.get('title', 'Untitled')}")
 
                 elif result.phase == DebatePhase.CONVERGENCE:
                     selected = result.output.get("selected_ideas", [])
-                    summary_parts.append(f"### 선정된 아이디어: {len(selected)}개")
+                    summary_parts.append(f"### Selected Ideas: {len(selected)}")
                     for idea in selected:
-                        summary_parts.append(f"- {idea.get('title', 'Untitled')} (점수: {idea.get('score', 'N/A')})")
+                        summary_parts.append(f"- {idea.get('title', 'Untitled')} (Score: {idea.get('score', 'N/A')})")
 
                 elif result.phase == DebatePhase.PLANNING:
-                    summary_parts.append("### 기획 검토 결과")
+                    summary_parts.append("### Planning Review Results")
                     approvals = result.output.get("approvals", 0)
                     total = result.output.get("total_votes", 0)
-                    summary_parts.append(f"- 승인: {approvals}/{total}")
+                    summary_parts.append(f"- Approvals: {approvals}/{total}")
 
             summary_parts.append("")
 
         # Final plan
         summary_parts.append("---")
         summary_parts.append("")
-        summary_parts.append("# 최종 기획안")
+        summary_parts.append("# Final Implementation Plan")
         summary_parts.append("")
         summary_parts.append(final_plan)
 

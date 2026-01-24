@@ -382,6 +382,7 @@ async def _auto_score_and_save_ideas(
     context: str,
     debate_session_id: str,
     db_session,
+    final_plan_content: Optional[str] = None,
     promote_threshold: float = 7.0,
     archive_threshold: float = 4.0,
     max_per_cycle: int = 3,
@@ -391,6 +392,7 @@ async def _auto_score_and_save_ideas(
 
     Also creates GitHub Issues for tracking.
     Includes Korean translation for all saved ideas and plans.
+    For high-scoring plans, triggers automatic project generation.
 
     Args:
         router: HybridLLMRouter for scoring
@@ -399,6 +401,7 @@ async def _auto_score_and_save_ideas(
         context: Debate context
         debate_session_id: ID of the debate session
         db_session: SQLAlchemy session
+        final_plan_content: Final plan content from debate (for project generation)
         promote_threshold: Score threshold for auto-promotion
         archive_threshold: Score below which to archive
         max_per_cycle: Maximum ideas to promote per cycle
@@ -600,6 +603,16 @@ async def _auto_score_and_save_ideas(
                     auto_gen_min_score = project_config.get("auto_generate", {}).get("min_score", 8.0)
                     plan_status = 'approved' if score.total >= auto_gen_min_score else 'draft'
 
+                    # Translate final_plan content if available
+                    plan_final_content_en = final_plan_content
+                    plan_final_content_ko = None
+                    if final_plan_content:
+                        try:
+                            plan_final_content_en, plan_final_content_ko = await translator.ensure_bilingual(final_plan_content)
+                        except Exception as e:
+                            logger.warning(f"Final plan translation failed: {e}")
+                            plan_final_content_en = final_plan_content
+
                     plan_repo.create({
                         'id': plan_id,
                         'idea_id': idea_id,
@@ -608,6 +621,8 @@ async def _auto_score_and_save_ideas(
                         'title_ko': plan_title_ko or plan_title_original,
                         'version': 1,
                         'status': plan_status,
+                        'final_plan': plan_final_content_en,
+                        'final_plan_ko': plan_final_content_ko,
                         'github_issue_id': plan_github_id,
                         'github_issue_url': plan_github_url,
                         'extra_metadata': {
@@ -617,6 +632,8 @@ async def _auto_score_and_save_ideas(
                         },
                     })
                     logger.info(f"Created {plan_status} plan for promoted idea: {idea_id} (score: {score.total:.1f})")
+                    if plan_final_content_en:
+                        logger.info(f"Plan includes final_plan content: {len(plan_final_content_en)} chars")
 
                     # Auto-generate project for high-scoring plans
                     if plan_status == 'approved':
@@ -1000,6 +1017,7 @@ async def _run_debate_async(topic: Optional[str] = None):
                 context=context,
                 debate_session_id=session_id,
                 db_session=session,
+                final_plan_content=result.final_plan,  # Pass final plan for project generation
             )
 
         # Log results

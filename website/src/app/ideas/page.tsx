@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
 import { ApiClient, type ApiTrend, type ApiIdea, type ApiPlan } from '@/lib/api';
@@ -10,6 +10,46 @@ import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
 import { IdeaComparison } from '@/components/visualization/IdeaComparison';
 import { TrendHeatmap } from '@/components/visualization/TrendHeatmap';
 import { IdeaNetwork } from '@/components/visualization/IdeaNetwork';
+
+// Helper function to extract readable text from JSON idea content
+function getIdeaSummaryText(content: string | null | undefined): string {
+  if (!content) return '';
+
+  try {
+    // Remove markdown code block if present
+    let jsonStr = content.trim();
+    if (jsonStr.startsWith('```json')) {
+      jsonStr = jsonStr.slice(7);
+    }
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.slice(3);
+    }
+    if (jsonStr.endsWith('```')) {
+      jsonStr = jsonStr.slice(0, -3);
+    }
+    jsonStr = jsonStr.trim();
+
+    const parsed = JSON.parse(jsonStr);
+
+    // Try to extract readable text in order of preference
+    if (parsed.core_analysis) return parsed.core_analysis;
+    if (parsed.proposal?.description) return parsed.proposal.description;
+    if (parsed.opportunity_risk?.opportunities) return parsed.opportunity_risk.opportunities;
+    if (parsed.idea_title) return parsed.idea_title;
+
+    // If nothing found, return first string value found
+    for (const value of Object.values(parsed)) {
+      if (typeof value === 'string' && value.length > 20) {
+        return value;
+      }
+    }
+
+    return content; // Fallback to original
+  } catch {
+    // Not JSON, return as is
+    return content;
+  }
+}
 
 type ViewMode = 'pipeline' | 'trends' | 'ideas' | 'plans';
 
@@ -437,7 +477,7 @@ export default function IdeasPage() {
                             <TerminalBadge variant="cyan">{idea.source_type}</TerminalBadge>
                           </div>
                           <h3 className="text-sm font-medium text-[#c0c0c0]">{getLocalizedText(idea.title, idea.title_ko)}</h3>
-                          <p className="text-xs text-[#6b7280] mt-1 line-clamp-2">{getLocalizedText(idea.summary, idea.summary_ko)}</p>
+                          <p className="text-xs text-[#6b7280] mt-1 line-clamp-2">{getIdeaSummaryText(getLocalizedText(idea.summary, idea.summary_ko))}</p>
                           {idea.created_at && (
                             <div className="text-[10px] text-[#6b7280] mt-2">
                               {formatLocalDateTime(idea.created_at)}

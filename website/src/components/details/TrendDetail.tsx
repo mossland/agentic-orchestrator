@@ -7,6 +7,7 @@ import { ApiClient, type ApiTrend, type ApiSignal } from '@/lib/api';
 import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { ScoreGauge } from '../visualization/ScoreGauge';
+import { TrendSparkline } from '../visualization/TrendSparkline';
 import { TerminalBadge } from '../TerminalWindow';
 
 interface TrendDetailProps {
@@ -125,6 +126,14 @@ export function TrendDetail({ data }: TrendDetailProps) {
           </div>
           <div className="text-xs text-[#6b7280]">{t('detail.relatedSignals')}</div>
         </div>
+      </div>
+
+      {/* Trend Momentum */}
+      <div className="card-cli p-4">
+        <TrendSparkline
+          signalCount={trend.signal_count}
+          showDetails={true}
+        />
       </div>
 
       {/* Description */}

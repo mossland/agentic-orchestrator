@@ -228,6 +228,67 @@ export interface AdaptersResponse {
   enabled_count: number;
 }
 
+export interface IdeaLineageResponse {
+  signals: Array<{
+    id: string;
+    title: string;
+    score: number;
+    source?: string;
+  }>;
+  trend: {
+    id: string;
+    name: string;
+    score: number;
+    signal_count: number;
+  } | null;
+  idea: {
+    id: string;
+    title: string;
+    score: number;
+    status: string;
+  };
+  plans: Array<{
+    id: string;
+    title: string;
+    version: number;
+    status: string;
+  }>;
+}
+
+export interface SignalTimelineResponse {
+  slots: Array<{
+    label: string;
+    count: number;
+    hour?: number;
+  }>;
+  total: number;
+  period: string;
+  timestamp: string;
+}
+
+export interface PipelineLiveResponse {
+  stages: {
+    signals: { count: number; rate: string; status: string };
+    trends: { count: number; rate: string; status: string };
+    ideas: { count: number; rate: string; status: string };
+    plans: { count: number; rate: string; status: string };
+  };
+  conversion_rates: {
+    signals_to_trends: number;
+    trends_to_ideas: number;
+    ideas_to_plans: number;
+  };
+  processing: Array<{
+    type: string;
+    title: string;
+    time_ago: string;
+    source?: string;
+    phase?: string;
+    score?: number;
+  }>;
+  timestamp: string;
+}
+
 // Generic fetch function with error handling and timeout
 async function apiFetch<T>(
   endpoint: string,
@@ -337,6 +398,14 @@ export class ApiClient {
     }>(`/ideas/${ideaId}`);
   }
 
+  static async getIdeaLineage(ideaId: string): Promise<ApiResponse<IdeaLineageResponse>> {
+    return apiFetch<IdeaLineageResponse>(`/ideas/${ideaId}/lineage`);
+  }
+
+  static async getSignalTimeline(period: '24h' | '7d' = '24h'): Promise<ApiResponse<SignalTimelineResponse>> {
+    return apiFetch<SignalTimelineResponse>(`/signals/timeline?period=${period}`);
+  }
+
   // Plans
   static async getPlans(params?: {
     limit?: number;
@@ -419,6 +488,11 @@ export class ApiClient {
   // Adapters
   static async getAdapters(): Promise<ApiResponse<AdaptersResponse>> {
     return apiFetch<AdaptersResponse>('/adapters');
+  }
+
+  // Pipeline Live
+  static async getPipelineLive(): Promise<ApiResponse<PipelineLiveResponse>> {
+    return apiFetch<PipelineLiveResponse>('/pipeline/live');
   }
 }
 

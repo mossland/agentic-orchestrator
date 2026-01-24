@@ -251,6 +251,62 @@ const translations: Record<Locale, Record<string, string>> = {
     'debates.messages': 'msgs',
     'debates.started': 'Started',
     'debates.noDebates': 'No debates found',
+
+    // Score Breakdown
+    'scoreBreakdown.title': 'Score Breakdown',
+    'scoreBreakdown.novelty': 'Novelty',
+    'scoreBreakdown.feasibility': 'Feasibility',
+    'scoreBreakdown.marketFit': 'Market Fit',
+    'scoreBreakdown.impact': 'Impact',
+    'scoreBreakdown.urgency': 'Urgency',
+    'scoreBreakdown.consensus': 'Consensus',
+    'scoreBreakdown.confidence': 'Confidence',
+    'scoreBreakdown.highConfidence': 'HIGH',
+    'scoreBreakdown.mediumConfidence': 'MED',
+    'scoreBreakdown.lowConfidence': 'LOW',
+
+    // Trend Sparkline
+    'trendSparkline.momentum': 'Momentum',
+    'trendSparkline.last7Days': 'Last 7 days',
+    'trendSparkline.velocity': 'Velocity',
+    'trendSparkline.signalsPerDay': 'signals/day',
+
+    // Agent Contribution
+    'agentContribution.title': 'Agent Contributions',
+    'agentContribution.agents': 'agents',
+    'agentContribution.influence': 'Influence',
+    'agentContribution.messages': 'Messages',
+    'agentContribution.high': 'HIGH',
+    'agentContribution.medium': 'MED',
+    'agentContribution.low': 'LOW',
+    'agentContribution.stance.advocate': 'Advocate',
+    'agentContribution.stance.challenger': 'Challenger',
+    'agentContribution.stance.refiner': 'Refiner',
+    'agentContribution.stance.neutral': 'Neutral',
+    'agentContribution.noContributions': 'No contributions yet',
+
+    // Pipeline Enhanced
+    'pipeline.conversionRates': 'Conversion Rates',
+    'pipeline.currentlyProcessing': 'Currently Processing',
+
+    // Signal Lineage
+    'signalLineage.title': 'Idea Lineage',
+    'signalLineage.signals': 'signals',
+    'signalLineage.noTrend': 'Direct generation',
+
+    // Signal Timeline
+    'signalTimeline.title': 'Signal Collection Timeline',
+    'signalTimeline.last24h': 'Last 24 hours',
+    'signalTimeline.last7d': 'Last 7 days',
+    'signalTimeline.signals': 'signals',
+    'signalTimeline.total': 'Total',
+    'signalTimeline.avg': 'Avg',
+    'signalTimeline.hour': 'hr',
+    'signalTimeline.day': 'day',
+    'signalTimeline.peak': 'Peak',
+    'signalTimeline.recent': 'Recent',
+    'signalTimeline.peakTime': 'Peak time',
+    'signalTimeline.normal': 'Normal',
   },
   ko: {
     'nav.dashboard': '대시보드',
@@ -492,6 +548,62 @@ const translations: Record<Locale, Record<string, string>> = {
     'debates.messages': '메시지',
     'debates.started': '시작',
     'debates.noDebates': '토론을 찾을 수 없음',
+
+    // Score Breakdown
+    'scoreBreakdown.title': '점수 분석',
+    'scoreBreakdown.novelty': '참신성',
+    'scoreBreakdown.feasibility': '실현가능성',
+    'scoreBreakdown.marketFit': '시장적합성',
+    'scoreBreakdown.impact': '영향력',
+    'scoreBreakdown.urgency': '시급성',
+    'scoreBreakdown.consensus': '합의도',
+    'scoreBreakdown.confidence': '신뢰도',
+    'scoreBreakdown.highConfidence': '높음',
+    'scoreBreakdown.mediumConfidence': '중간',
+    'scoreBreakdown.lowConfidence': '낮음',
+
+    // Trend Sparkline
+    'trendSparkline.momentum': '모멘텀',
+    'trendSparkline.last7Days': '최근 7일',
+    'trendSparkline.velocity': '속도',
+    'trendSparkline.signalsPerDay': '시그널/일',
+
+    // Agent Contribution
+    'agentContribution.title': '에이전트 기여도',
+    'agentContribution.agents': '에이전트',
+    'agentContribution.influence': '영향력',
+    'agentContribution.messages': '메시지',
+    'agentContribution.high': '높음',
+    'agentContribution.medium': '중간',
+    'agentContribution.low': '낮음',
+    'agentContribution.stance.advocate': '옹호자',
+    'agentContribution.stance.challenger': '도전자',
+    'agentContribution.stance.refiner': '정제자',
+    'agentContribution.stance.neutral': '중립',
+    'agentContribution.noContributions': '기여 내역 없음',
+
+    // Pipeline Enhanced
+    'pipeline.conversionRates': '전환율',
+    'pipeline.currentlyProcessing': '현재 처리 중',
+
+    // Signal Lineage
+    'signalLineage.title': '아이디어 계보',
+    'signalLineage.signals': '시그널',
+    'signalLineage.noTrend': '직접 생성',
+
+    // Signal Timeline
+    'signalTimeline.title': '시그널 수집 타임라인',
+    'signalTimeline.last24h': '최근 24시간',
+    'signalTimeline.last7d': '최근 7일',
+    'signalTimeline.signals': '시그널',
+    'signalTimeline.total': '전체',
+    'signalTimeline.avg': '평균',
+    'signalTimeline.hour': '시간',
+    'signalTimeline.day': '일',
+    'signalTimeline.peak': '피크',
+    'signalTimeline.recent': '최근',
+    'signalTimeline.peakTime': '피크 시간',
+    'signalTimeline.normal': '일반',
   },
 };
 

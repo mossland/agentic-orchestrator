@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
-import { ApiClient, type ApiIdea, type ApiDebate, type ApiPlan, type ApiDebateMessage } from '@/lib/api';
+import { ApiClient, type ApiIdea, type ApiDebate, type ApiPlan, type ApiDebateMessage, type IdeaLineageResponse } from '@/lib/api';
 import type { ModalData } from '../modals/ModalProvider';
 import { IdeaJourney } from '../visualization/IdeaJourney';
 import { ScoreGauge } from '../visualization/ScoreGauge';
+import { ScoreBreakdown } from '../visualization/ScoreBreakdown';
+import { AgentContribution } from '../visualization/AgentContribution';
+import { SignalLineage } from '../visualization/SignalLineage';
 import { TerminalBadge } from '../TerminalWindow';
 
 interface IdeaDetailProps {
@@ -22,6 +25,7 @@ interface IdeaWithDetails {
 export function IdeaDetail({ data }: IdeaDetailProps) {
   const { t, locale } = useI18n();
   const [ideaData, setIdeaData] = useState<IdeaWithDetails | null>(null);
+  const [lineageData, setLineageData] = useState<IdeaLineageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedMessages, setExpandedMessages] = useState<boolean>(false);
@@ -32,11 +36,20 @@ export function IdeaDetail({ data }: IdeaDetailProps) {
       setError(null);
 
       try {
-        const response = await ApiClient.getIdeaDetail(data.id);
-        if (response.data) {
-          setIdeaData(response.data);
+        // Fetch idea detail and lineage in parallel
+        const [ideaResponse, lineageResponse] = await Promise.all([
+          ApiClient.getIdeaDetail(data.id),
+          ApiClient.getIdeaLineage(data.id),
+        ]);
+
+        if (ideaResponse.data) {
+          setIdeaData(ideaResponse.data);
         } else {
-          setError(response.error || t('detail.fetchError'));
+          setError(ideaResponse.error || t('detail.fetchError'));
+        }
+
+        if (lineageResponse.data) {
+          setLineageData(lineageResponse.data);
         }
       } catch {
         setError(t('detail.fetchError'));
@@ -93,7 +106,17 @@ export function IdeaDetail({ data }: IdeaDetailProps) {
         <h3 className="text-lg font-bold text-[#c0c0c0]">{idea.title}</h3>
       </div>
 
-      {/* Score */}
+      {/* Score Breakdown */}
+      <div className="card-cli p-4">
+        <ScoreBreakdown
+          score={idea.score}
+          consensus={debates.length > 0 ? Math.min(95, 70 + debates.length * 5) : undefined}
+          confidence={idea.score >= 7 ? 'high' : idea.score >= 5 ? 'medium' : 'low'}
+          showDetails={true}
+        />
+      </div>
+
+      {/* Stats Summary */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card-cli p-4">
           <div className="text-xs text-[#6b7280] uppercase mb-2">{t('detail.ideaScore')}</div>
@@ -123,11 +146,36 @@ export function IdeaDetail({ data }: IdeaDetailProps) {
         </div>
       </div>
 
+      {/* Agent Contributions */}
+      {debates.length > 0 && debates[0].messages && debates[0].messages.length > 0 && (
+        <div className="card-cli p-4">
+          <AgentContribution
+            messages={debates[0].messages}
+            phase={debates[0].phase}
+            showDetails={true}
+            maxAgents={8}
+          />
+        </div>
+      )}
+
       {/* Idea Journey Timeline */}
       <div className="card-cli p-4">
         <div className="text-xs text-[#6b7280] uppercase mb-4">{t('detail.ideaJourney')}</div>
         <IdeaJourney idea={idea} debates={debates} plans={plans} />
       </div>
+
+      {/* Signal Lineage */}
+      {lineageData && (
+        <div className="card-cli p-4">
+          <SignalLineage
+            lineage={lineageData}
+            onNodeClick={(type, id) => {
+              // Could open modals for each node type
+              console.log(`Clicked ${type}: ${id}`);
+            }}
+          />
+        </div>
+      )}
 
       {/* Debate Timeline with Agent Messages */}
       {debates.length > 0 && debates[0].messages && debates[0].messages.length > 0 && (

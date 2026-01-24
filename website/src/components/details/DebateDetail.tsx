@@ -8,6 +8,7 @@ import { formatLocalDateTime } from '@/lib/date';
 import type { ModalData } from '../modals/ModalProvider';
 import { DebateConversation } from '../visualization/DebateConversation';
 import { DebateTimeline } from '../visualization/DebateTimeline';
+import { AgentContribution } from '../visualization/AgentContribution';
 import { TerminalBadge } from '../TerminalWindow';
 
 interface DebateDetailProps {
@@ -146,6 +147,18 @@ export function DebateDetail({ data }: DebateDetailProps) {
           ))}
         </div>
       </div>
+
+      {/* Agent Contributions */}
+      {messages.length > 0 && (
+        <div className="card-cli p-4">
+          <AgentContribution
+            messages={messages}
+            phase={debate.phase}
+            showDetails={true}
+            maxAgents={10}
+          />
+        </div>
+      )}
 
       {/* View Mode Toggle */}
       <div className="flex gap-2">

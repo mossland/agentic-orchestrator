@@ -372,6 +372,128 @@ async def get_idea_detail(
     }
 
 
+@app.get("/ideas/{idea_id}/lineage")
+async def get_idea_lineage(
+    idea_id: str,
+    session: Session = Depends(get_session),
+):
+    """Get complete lineage for an idea showing signals → trend → idea → plans flow.
+
+    Returns source signals, parent trend (if any), the idea, and generated plans.
+    """
+    from ..db.models import Signal, Trend
+
+    idea_repo = IdeaRepository(session)
+    plan_repo = PlanRepository(session)
+
+    idea = idea_repo.get_by_id(idea_id)
+    if not idea:
+        return {"error": "Idea not found", "idea_id": idea_id}
+
+    # Get related signals based on idea metadata or source
+    signals = []
+    trend = None
+
+    # Check if idea has source trend info in metadata
+    trend_id = None
+    if idea.extra_metadata:
+        trend_id = idea.extra_metadata.get('trend_id')
+        source_signal_ids = idea.extra_metadata.get('source_signal_ids', [])
+
+        # Fetch source signals if IDs are stored
+        if source_signal_ids:
+            for signal_id in source_signal_ids[:10]:  # Limit to 10
+                signal = session.query(Signal).filter(Signal.id == signal_id).first()
+                if signal:
+                    signals.append({
+                        "id": signal.id,
+                        "title": signal.title,
+                        "score": signal.score,
+                        "source": signal.source,
+                    })
+
+    # If we have a trend_id, fetch the trend
+    if trend_id:
+        trend_obj = session.query(Trend).filter(Trend.id == trend_id).first()
+        if trend_obj:
+            trend = {
+                "id": trend_obj.id,
+                "name": trend_obj.name,
+                "score": trend_obj.score,
+                "signal_count": trend_obj.signal_count,
+            }
+
+    # If no signals found yet, try to find related signals by keywords/title
+    if not signals:
+        # Search for signals with similar keywords
+        keywords = []
+        if idea.extra_metadata and idea.extra_metadata.get('keywords'):
+            keywords = idea.extra_metadata.get('keywords', [])[:5]
+
+        if keywords:
+            from sqlalchemy import or_, func
+            keyword_filters = [Signal.title.ilike(f'%{kw}%') for kw in keywords]
+            related_signals = (
+                session.query(Signal)
+                .filter(or_(*keyword_filters))
+                .order_by(Signal.score.desc())
+                .limit(5)
+                .all()
+            )
+            for signal in related_signals:
+                signals.append({
+                    "id": signal.id,
+                    "title": signal.title,
+                    "score": signal.score,
+                    "source": signal.source,
+                })
+
+    # If still no trend found, try to find by name similarity
+    if not trend and idea.title:
+        from sqlalchemy import func
+        # Simple search by title words
+        words = idea.title.split()[:3]
+        for word in words:
+            if len(word) > 4:  # Skip short words
+                found_trend = (
+                    session.query(Trend)
+                    .filter(Trend.name.ilike(f'%{word}%'))
+                    .order_by(Trend.score.desc())
+                    .first()
+                )
+                if found_trend:
+                    trend = {
+                        "id": found_trend.id,
+                        "name": found_trend.name,
+                        "score": found_trend.score,
+                        "signal_count": found_trend.signal_count,
+                    }
+                    break
+
+    # Get plans
+    plans = plan_repo.get_by_idea(idea_id)
+
+    return {
+        "signals": signals,
+        "trend": trend,
+        "idea": {
+            "id": idea.id,
+            "title": idea.title,
+            "score": idea.score,
+            "status": idea.status,
+        },
+        "plans": [
+            {
+                "id": p.id,
+                "title": p.title,
+                "version": p.version,
+                "status": p.status,
+            }
+            for p in plans
+        ],
+    }
+
+
 @app.get("/plans")
 async def get_plans(
     limit: int = Query(default=20, le=100),
@@ -745,6 +867,214 @@ async def get_agents(phase: Optional[str] = None):
     }
 
 
+@app.get("/signals/timeline")
+async def get_signals_timeline(
+    period: str = Query(default="24h", pattern="^(24h|7d)$"),
+    session: Session = Depends(get_session),
+):
+    """Get signal collection timeline for visualization.
+
+    Returns hourly counts for 24h or daily counts for 7d period.
+    """
+    from ..db.models import Signal
+    from sqlalchemy import func, extract
+    from datetime import timedelta
+
+    now = datetime.utcnow()
+
+    if period == "24h":
+        # Get hourly counts for last 24 hours
+        start_time = now - timedelta(hours=24)
+        results = (
+            session.query(
+                extract('hour', Signal.collected_at).label('hour'),
+                func.count(Signal.id).label('count')
+            )
+            .filter(Signal.collected_at >= start_time)
+            .group_by(extract('hour', Signal.collected_at))
+            .all()
+        )
+
+        # Build hourly slots
+        hour_counts = {int(r.hour): r.count for r in results}
+        slots = []
+        for i in range(24):
+            hour = (now.hour - 23 + i) % 24
+            slots.append({
+                "label": f"{hour:02d}:00",
+                "count": hour_counts.get(hour, 0),
+                "hour": hour,
+            })
+    else:
+        # Get daily counts for last 7 days
+        start_time = now - timedelta(days=7)
+        results = (
+            session.query(
+                func.date(Signal.collected_at).label('date'),
+                func.count(Signal.id).label('count')
+            )
+            .filter(Signal.collected_at >= start_time)
+            .group_by(func.date(Signal.collected_at))
+            .all()
+        )
+
+        # Build daily slots
+        date_counts = {str(r.date): r.count for r in results}
+        days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+        slots = []
+        for i in range(7):
+            date = now - timedelta(days=6-i)
+            date_str = date.strftime('%Y-%m-%d')
+            slots.append({
+                "label": days[date.weekday()],
+                "count": date_counts.get(date_str, 0),
+            })
+
+    total = sum(s['count'] for s in slots)
+
+    return {
+        "slots": slots,
+        "total": total,
+        "period": period,
+        "timestamp": now.isoformat(),
+    }
+
+
+@app.get("/pipeline/live")
+async def get_pipeline_live(session: Session = Depends(get_session)):
+    """Get real-time pipeline status with conversion rates and current processing items.
+
+    Returns:
+        - stages: Current counts for each pipeline stage (signals, trends, ideas, plans)
+        - conversion_rates: Conversion rates between stages
+        - processing: Currently processing items
+        - rates: Hourly/daily generation rates
+    """
+    from ..db.models import Signal, Trend, Idea, DebateSession, Plan
+    from sqlalchemy import func, desc
+    from datetime import timedelta
+
+    now = datetime.utcnow()
+    today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    last_hour = now - timedelta(hours=1)
+    last_24h = now - timedelta(hours=24)
+    last_7d = now - timedelta(days=7)
+
+    # Get counts for each stage
+    total_signals = session.query(func.count(Signal.id)).scalar() or 0
+    total_trends = session.query(func.count(Trend.id)).scalar() or 0
+    total_ideas = session.query(func.count(Idea.id)).scalar() or 0
+    total_plans = session.query(func.count(Plan.id)).scalar() or 0
+
+    # Get hourly rates
+    signals_last_hour = session.query(func.count(Signal.id)).filter(
+        Signal.collected_at >= last_hour
+    ).scalar() or 0
+
+    trends_today = session.query(func.count(Trend.id)).filter(
+        Trend.analyzed_at >= today
+    ).scalar() or 0
+
+    ideas_today = session.query(func.count(Idea.id)).filter(
+        Idea.created_at >= today
+    ).scalar() or 0
+
+    plans_last_7d = session.query(func.count(Plan.id)).filter(
+        Plan.created_at >= last_7d
+    ).scalar() or 0
+
+    # Calculate conversion rates
+    signals_to_trends = (total_trends / total_signals * 100) if total_signals > 0 else 0
+    trends_to_ideas = (total_ideas / total_trends * 100) if total_trends > 0 else 0
+    ideas_to_plans = (total_plans / total_ideas * 100) if total_ideas > 0 else 0
+
+    # Get currently processing items
+    processing = []
+
+    # Recent signals (last 5 minutes)
+    recent_signals = (
+        session.query(Signal)
+        .filter(Signal.collected_at >= now - timedelta(minutes=5))
+        .order_by(desc(Signal.collected_at))
+        .limit(3)
+        .all()
+    )
+    for signal in recent_signals:
+        minutes_ago = int((now - signal.collected_at).total_seconds() / 60) if signal.collected_at else 0
+        processing.append({
+            "type": "SIGNAL",
+            "title": signal.title[:60] + "..." if len(signal.title) > 60 else signal.title,
+            "time_ago": f"{minutes_ago}m ago" if minutes_ago > 0 else "just now",
+            "source": signal.source,
+        })
+
+    # Active debates
+    active_debates = (
+        session.query(DebateSession)
+        .filter(DebateSession.status == "in-progress")
+        .order_by(desc(DebateSession.started_at))
+        .limit(2)
+        .all()
+    )
+    for debate in active_debates:
+        topic_short = (debate.topic[:50] + "...") if debate.topic and len(debate.topic) > 50 else (debate.topic or "Unknown")
+        processing.append({
+            "type": "DEBATE",
+            "title": topic_short,
+            "time_ago": f"R{debate.round_number}/{debate.max_rounds}",
+            "phase": debate.phase,
+        })
+
+    # Recent trends being analyzed (last 30 minutes)
+    recent_trends = (
+        session.query(Trend)
+        .filter(Trend.analyzed_at >= now - timedelta(minutes=30))
+        .order_by(desc(Trend.analyzed_at))
+        .limit(2)
+        .all()
+    )
+    for trend in recent_trends:
+        minutes_ago = int((now - trend.analyzed_at).total_seconds() / 60) if trend.analyzed_at else 0
+        processing.append({
+            "type": "TREND",
+            "title": trend.name[:50] + "..." if len(trend.name) > 50 else trend.name,
+            "time_ago": f"{minutes_ago}m ago",
+            "score": trend.score,
+        })
+
+    return {
+        "stages": {
+            "signals": {
+                "count": total_signals,
+                "rate": f"+{signals_last_hour}/hr",
+                "status": "active" if signals_last_hour > 0 else "idle",
+            },
+            "trends": {
+                "count": total_trends,
+                "rate": f"+{trends_today}/day",
+                "status": "active" if trends_today > 0 else "idle",
+            },
+            "ideas": {
+                "count": total_ideas,
+                "rate": f"+{ideas_today}/day",
+                "status": "active" if ideas_today > 0 else "idle",
+            },
+            "plans": {
+                "count": total_plans,
+                "rate": f"+{plans_last_7d}/wk",
+                "status": "active" if plans_last_7d > 0 else "idle",
+            },
+        },
+        "conversion_rates": {
+            "signals_to_trends": round(signals_to_trends, 1),
+            "trends_to_ideas": round(trends_to_ideas, 1),
+            "ideas_to_plans": round(ideas_to_plans, 1),
+        },
+        "processing": processing[:5],  # Limit to 5 items
+        "timestamp": now.isoformat(),
+    }
+
+
 @app.get("/")
 async def root():
     """API root endpoint."""
@@ -764,6 +1094,7 @@ async def root():
             "activity": "/activity",
             "agents": "/agents",
             "adapters": "/adapters",
+            "pipeline/live": "/pipeline/live",
             "docs": "/docs",
         },
     }

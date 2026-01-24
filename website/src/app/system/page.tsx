@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/lib/i18n';
-import { ApiClient, type ApiSignal, type StatusResponse } from '@/lib/api';
+import { ApiClient, type ApiSignal, type StatusResponse, type SignalTimelineResponse } from '@/lib/api';
 import { TerminalWindow, TerminalBadge } from '@/components/TerminalWindow';
+import { SignalTimeline } from '@/components/visualization/SignalTimeline';
 import { useModal } from '@/components/modals/useModal';
 
 type ViewMode = 'status' | 'signals' | 'tech';
@@ -19,17 +20,36 @@ export default function SystemPage() {
   const [loading, setLoading] = useState(true);
   const [sources, setSources] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [timelineData, setTimelineData] = useState<SignalTimelineResponse | null>(null);
+  const [timelinePeriod, setTimelinePeriod] = useState<'24h' | '7d'>('24h');
 
   useEffect(() => {
     async function fetchStatus() {
-      const response = await ApiClient.getStatus();
-      if (response.data) {
-        setStatus(response.data);
+      const [statusRes, timelineRes] = await Promise.all([
+        ApiClient.getStatus(),
+        ApiClient.getSignalTimeline('24h'),
+      ]);
+
+      if (statusRes.data) {
+        setStatus(statusRes.data);
+      }
+      if (timelineRes.data) {
+        setTimelineData(timelineRes.data);
       }
       setLoading(false);
     }
     fetchStatus();
   }, []);
+
+  useEffect(() => {
+    async function fetchTimeline() {
+      const response = await ApiClient.getSignalTimeline(timelinePeriod);
+      if (response.data) {
+        setTimelineData(response.data);
+      }
+    }
+    fetchTimeline();
+  }, [timelinePeriod]);
 
   useEffect(() => {
     async function fetchSignals() {
@@ -168,6 +188,46 @@ export default function SystemPage() {
                 </div>
               </TerminalWindow>
             )}
+
+            {/* Signal Timeline */}
+            <TerminalWindow title="SIGNAL_TIMELINE" className="mb-6">
+              <div className="mb-4 flex items-center justify-between">
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setTimelinePeriod('24h')}
+                    className={`text-xs px-3 py-1 rounded transition-colors ${
+                      timelinePeriod === '24h'
+                        ? 'bg-[#39ff14]/20 text-[#39ff14] border border-[#39ff14]/30'
+                        : 'text-[#6b7280] hover:bg-[#21262d]'
+                    }`}
+                  >
+                    Last 24h
+                  </button>
+                  <button
+                    onClick={() => setTimelinePeriod('7d')}
+                    className={`text-xs px-3 py-1 rounded transition-colors ${
+                      timelinePeriod === '7d'
+                        ? 'bg-[#39ff14]/20 text-[#39ff14] border border-[#39ff14]/30'
+                        : 'text-[#6b7280] hover:bg-[#21262d]'
+                    }`}
+                  >
+                    Last 7 days
+                  </button>
+                </div>
+              </div>
+              {timelineData ? (
+                <SignalTimeline
+                  data={timelineData.slots}
+                  totalSignals={timelineData.total}
+                  period={timelinePeriod}
+                  showDetails={true}
+                />
+              ) : (
+                <div className="text-center py-8 text-[#6b7280]">
+                  Loading timeline data...
+                </div>
+              )}
+            </TerminalWindow>
 
             {/* Pipeline */}
             <TerminalWindow title="PIPELINE_STAGES">

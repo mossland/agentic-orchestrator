@@ -197,6 +197,7 @@ class Idea(Base):
     source_type = Column(String(20), nullable=False)  # traditional, trend_based
     source_trend_id = Column(String(36), ForeignKey("trends.id"))
     source_signals = Column(JSON)  # List of signal IDs
+    debate_session_id = Column(String(36), ForeignKey("debate_sessions.id"), nullable=True, index=True)
     status = Column(String(20), default="pending", index=True)
     github_issue_id = Column(Integer)
     github_issue_url = Column(Text)
@@ -207,7 +208,8 @@ class Idea(Base):
 
     # Relationships
     source_trend = relationship("Trend", back_populates="ideas")
-    debate_sessions = relationship("DebateSession", back_populates="idea")
+    source_debate = relationship("DebateSession", foreign_keys=[debate_session_id])
+    debate_sessions = relationship("DebateSession", back_populates="idea", foreign_keys="DebateSession.idea_id")
     plans = relationship("Plan", back_populates="idea")
 
     def to_dict(self) -> Dict[str, Any]:
@@ -215,9 +217,11 @@ class Idea(Base):
             "id": self.id,
             "title": self.title,
             "summary": self.summary,
+            "description": self.description,
             "source_type": self.source_type,
             "status": self.status,
             "score": self.score,
+            "debate_session_id": self.debate_session_id,
             "github_issue_url": self.github_issue_url,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
@@ -249,7 +253,7 @@ class DebateSession(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
-    idea = relationship("Idea", back_populates="debate_sessions")
+    idea = relationship("Idea", back_populates="debate_sessions", foreign_keys=[idea_id])
     messages = relationship("DebateMessage", back_populates="session", order_by="DebateMessage.created_at")
 
     def to_dict(self) -> Dict[str, Any]:

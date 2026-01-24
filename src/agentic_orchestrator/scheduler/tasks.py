@@ -384,13 +384,13 @@ async def _auto_score_and_save_ideas(
                 'summary': idea_summary,
                 'description': idea_content,
                 'source_type': 'debate',
+                'debate_session_id': debate_session_id,
                 'status': status,
                 'score': score.total,
                 'github_issue_id': github_issue_id,
                 'github_issue_url': github_issue_url,
                 'extra_metadata': {
                     'auto_score': score.to_dict(),
-                    'debate_session_id': debate_session_id,
                     'debate_topic': topic,
                 },
             })

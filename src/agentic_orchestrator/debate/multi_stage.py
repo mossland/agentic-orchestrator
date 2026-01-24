@@ -769,9 +769,49 @@ class MultiStageDebate:
         agent: AgentPersona,
         round_num: int,
     ) -> Optional[Idea]:
-        """Extract idea from agent response."""
+        """Extract idea from agent response.
+
+        Title requirements:
+        - Minimum 30 characters for specificity
+        - Must not be a generic section header
+        - Should contain specific keywords (tech names, project names, numbers)
+        """
         import re
         lines = content.strip().split("\n")
+
+        # Generic section headers to skip (expanded list)
+        skip_headers = [
+            '핵심 분석', '기회', '리스크', '제안', '우선순위', '실행', '개요', '목표',
+            '요약', '결론', '배경', '현황', '분석', '전략', '방안', '계획', '일정',
+            '기대 효과', '예상 결과', '참고', '부록', '첨부', '서론', '본론',
+            '소개', '개요', '요점', '핵심', 'summary', 'introduction', 'conclusion',
+            'overview', 'background', 'analysis', 'proposal'
+        ]
+
+        def is_generic_header(text: str) -> bool:
+            text_lower = text.lower().strip()
+            # Check for exact matches or patterns like "1. 핵심 분석"
+            for skip in skip_headers:
+                if skip in text_lower:
+                    return True
+            # Check for numbered generic headers
+            if re.match(r'^[\d]+[\.\)]\s*[가-힣]{2,4}$', text_lower):
+                return True
+            return False
+
+        def has_specific_content(text: str) -> bool:
+            """Check if title contains specific keywords that make it valuable."""
+            specific_patterns = [
+                r'(AI|DeFi|NFT|DAO|Web3|GPT|LLM|SDK|API)',  # Tech acronyms
+                r'(Uniswap|Aave|OpenAI|Mossland|모스랜드)',  # Project names
+                r'\d+',  # Contains numbers (metrics, versions)
+                r'(홀더|유저|개발자|크리에이터)',  # User types
+                r'(플랫폼|시스템|서비스|도구|봇)',  # Product types
+            ]
+            for pattern in specific_patterns:
+                if re.search(pattern, text, re.IGNORECASE):
+                    return True
+            return False
 
         title = None
 
@@ -779,64 +819,90 @@ class MultiStageDebate:
         idea_pattern = r"##\s*아이디어[:\s]+(.+)"
         match = re.search(idea_pattern, content)
         if match:
-            title = match.group(1).strip()
+            potential = match.group(1).strip()
+            if len(potential) >= 30 and not is_generic_header(potential):
+                title = potential
 
         # Priority 2: Look for "프로젝트 명:" or "프로젝트명:" format
         if not title:
             project_pattern = r"프로젝트\s*명[:\s]+(.+)"
             match = re.search(project_pattern, content)
             if match:
-                title = match.group(1).strip()
+                potential = match.group(1).strip()
+                if len(potential) >= 30 and not is_generic_header(potential):
+                    title = potential
 
-        # Priority 3: Try to find title from headers or bold text
+        # Priority 3: Look for "서비스명:" or "제품명:" format
+        if not title:
+            service_pattern = r"(서비스|제품|솔루션)\s*명[:\s]+(.+)"
+            match = re.search(service_pattern, content)
+            if match:
+                potential = match.group(2).strip()
+                if len(potential) >= 30 and not is_generic_header(potential):
+                    title = potential
+
+        # Priority 4: Try to find title from headers or bold text
         if not title:
             for line in lines:
                 line = line.strip()
-                # Skip generic headers
-                if any(skip in line.lower() for skip in ['핵심 분석', '기회', '리스크', '제안', '우선순위', '실행', '개요', '목표']):
+                if is_generic_header(line):
                     continue
                 if line.startswith("##") and "아이디어" not in line:
                     potential = line.lstrip("#").strip()
-                    if len(potential) > 20:  # Require substantial title
+                    if len(potential) >= 30 and has_specific_content(potential):
                         title = potential
                         break
                 if line.startswith("**") and line.endswith("**"):
                     potential = line.strip("*").strip()
-                    if len(potential) > 20:
+                    if len(potential) >= 30 and has_specific_content(potential):
                         title = potential
                         break
 
-        # Priority 4: Use first substantial line
+        # Priority 5: Use first substantial line with specific content
         if not title:
             for line in lines:
                 line = line.strip()
-                if line.startswith("#") or line.startswith("*"):
+                if line.startswith("#") or line.startswith("*") or line.startswith("-"):
                     continue
-                if len(line) > 30 and len(line) < 150 and not line.startswith("-"):
+                if is_generic_header(line):
+                    continue
+                if len(line) >= 30 and len(line) < 200 and has_specific_content(line):
                     title = line
                     break
 
-        # Fallback: Generate descriptive title from content
-        if not title or len(title) < 20:
-            # Extract keywords from content
-            keywords = []
-            keyword_patterns = [
-                r'(AI|DeFi|NFT|DAO|Web3|블록체인|메타버스|에이전트)',
-                r'(자동화|분석|트래킹|모니터링|대시보드)',
-                r'(Mossland|모스랜드)',
-            ]
-            for pattern in keyword_patterns:
-                matches = re.findall(pattern, content[:500])
-                keywords.extend(matches[:2])
+        # Fallback: Generate descriptive title from content analysis
+        if not title or len(title) < 30:
+            # Extract meaningful keywords from content
+            tech_matches = re.findall(r'(AI|DeFi|NFT|DAO|Web3|블록체인|메타버스|에이전트|스마트 컨트랙트)', content[:1000])
+            action_matches = re.findall(r'(자동화|분석|트래킹|모니터링|대시보드|최적화|통합|연동)', content[:1000])
+            target_matches = re.findall(r'(홀더|유저|개발자|커뮤니티|투자자)', content[:1000])
 
-            if keywords:
-                title = f"{agent.name}의 {' '.join(keywords[:3])} 관련 아이디어 제안"
+            tech = list(dict.fromkeys(tech_matches))[:2]  # Unique, max 2
+            actions = list(dict.fromkeys(action_matches))[:1]
+            targets = list(dict.fromkeys(target_matches))[:1]
+
+            parts = []
+            if targets:
+                parts.append(f"{targets[0]}를 위한")
+            if tech:
+                parts.append(' + '.join(tech))
+            if actions:
+                parts.append(f"{actions[0]} 시스템")
             else:
-                title = f"{agent.name}의 Mossland 생태계 혁신 아이디어 제안"
+                parts.append("솔루션")
+
+            if parts:
+                title = f"Mossland {' '.join(parts)} 구축 방안"
+            else:
+                title = f"Mossland 생태계 확장을 위한 {agent.role} 관점의 혁신 전략"
+
+            # Ensure minimum length
+            if len(title) < 30:
+                title = f"{agent.name}의 Mossland 생태계 혁신 아이디어 - {agent.role} 전문가 제안"
 
         return Idea(
             id=f"idea-{self.session_id}-{round_num}-{agent.id}",
-            title=title[:150],  # Allow longer titles
+            title=title[:200],  # Allow longer titles (up to 200 chars)
             content=content,
             agent_id=agent.id,
             agent_name=agent.name,

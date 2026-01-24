@@ -323,7 +323,10 @@ async def get_idea_detail(
     idea_id: str,
     session: Session = Depends(get_session),
 ):
-    """Get detailed idea information with related data."""
+    """Get detailed idea information with related debates and plans.
+
+    Returns full description and debate messages for the source debate session.
+    """
     idea_repo = IdeaRepository(session)
     debate_repo = DebateRepository(session)
     plan_repo = PlanRepository(session)
@@ -332,13 +335,39 @@ async def get_idea_detail(
     if not idea:
         return {"error": "Idea not found", "idea_id": idea_id}
 
-    # Get related debates and plans
-    debates = debate_repo.get_sessions_by_idea(idea_id)
+    # Get source debate session (via FK or metadata for backward compatibility)
+    source_debate_id = idea.debate_session_id
+    if not source_debate_id and idea.extra_metadata:
+        source_debate_id = idea.extra_metadata.get('debate_session_id')
+
+    debates = []
+    seen_ids = set()
+
+    # Add source debate with messages first
+    if source_debate_id:
+        source_debate = debate_repo.get_session_by_id(source_debate_id)
+        if source_debate:
+            messages = debate_repo.get_session_messages(source_debate_id)
+            debate_dict = source_debate.to_dict()
+            debate_dict['messages'] = [m.to_dict() for m in messages]
+            debates.append(debate_dict)
+            seen_ids.add(source_debate_id)
+
+    # Also get any debates linked via idea_id (backward compatibility)
+    linked_debates = debate_repo.get_sessions_by_idea(idea_id)
+    for d in linked_debates:
+        if d.id not in seen_ids:
+            messages = debate_repo.get_session_messages(d.id)
+            debate_dict = d.to_dict()
+            debate_dict['messages'] = [m.to_dict() for m in messages]
+            debates.append(debate_dict)
+            seen_ids.add(d.id)
+
     plans = plan_repo.get_by_idea(idea_id)
 
     return {
         "idea": idea.to_dict(),
-        "debates": [d.to_dict() for d in debates],
+        "debates": debates,
         "plans": [p.to_dict() for p in plans],
     }
 

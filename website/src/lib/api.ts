@@ -103,10 +103,23 @@ export interface ApiIdea {
   id: string;
   title: string;
   summary: string;
+  description: string | null;
   source_type: string;
   status: string;
   score: number;
+  debate_session_id: string | null;
   github_issue_url: string | null;
+  created_at: string | null;
+}
+
+export interface ApiDebateMessage {
+  id: string;
+  agent_id: string;
+  agent_name: string;
+  agent_handle: string | null;
+  message_type: string;
+  content: string;
+  content_ko: string | null;
   created_at: string | null;
 }
 
@@ -153,6 +166,7 @@ export interface ApiDebate {
   started_at: string | null;
   completed_at: string | null;
   message_count?: number;
+  messages?: ApiDebateMessage[];
 }
 
 export interface UsageResponse {
@@ -307,7 +321,7 @@ export class ApiClient {
   static async getIdeaDetail(ideaId: string) {
     return apiFetch<{
       idea: ApiIdea;
-      debates: ApiDebate[];
+      debates: (ApiDebate & { messages?: ApiDebateMessage[] })[];
       plans: ApiPlan[];
     }>(`/ideas/${ideaId}`);
   }

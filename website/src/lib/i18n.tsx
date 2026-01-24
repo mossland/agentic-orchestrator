@@ -177,6 +177,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'detail.collaboration': 'Collaboration',
     'detail.rolePerspective': 'Role Perspective',
     'detail.traitRadar': 'Trait Radar',
+    'detail.fullDescription': 'Full Description',
+    'detail.debateTimeline': 'Debate Timeline',
+    'detail.expand': 'Expand',
+    'detail.collapse': 'Collapse',
+    'detail.clickToShowMessages': 'Click expand to show agent messages',
 
     // Journey
     'journey.signalCollected': 'Signal Collected',
@@ -408,6 +413,11 @@ const translations: Record<Locale, Record<string, string>> = {
     'detail.collaboration': '협업',
     'detail.rolePerspective': '역할 관점',
     'detail.traitRadar': '특성 레이더',
+    'detail.fullDescription': '전체 설명',
+    'detail.debateTimeline': '토론 타임라인',
+    'detail.expand': '펼치기',
+    'detail.collapse': '접기',
+    'detail.clickToShowMessages': '에이전트 메시지를 보려면 펼치기를 클릭하세요',
 
     // Journey
     'journey.signalCollected': '신호 수집',

@@ -57,9 +57,14 @@ agentic-orchestrator/
 │   ├── llm/                     # LLM 라우터
 │   │   └── router.py            # Ollama, Claude, OpenAI 라우팅
 │   ├── personas/                # AI 에이전트 페르소나 (34명)
+│   ├── project/                 # Plan → Project 자동 생성
+│   │   ├── parser.py            # Plan 마크다운 파싱
+│   │   ├── templates.py         # 기술 스택별 템플릿
+│   │   ├── generator.py         # LLM 코드 생성
+│   │   └── scaffold.py          # 프로젝트 생성 오케스트레이션
 │   ├── scheduler/               # PM2 스케줄 작업
 │   │   ├── __main__.py          # CLI 엔트리포인트
-│   │   └── tasks.py             # 작업 구현 (signal, debate, backlog)
+│   │   └── tasks.py             # 작업 구현 (signal, debate, backlog, project)
 │   ├── translation/             # 양방향 번역 모듈
 │   │   └── translator.py        # ContentTranslator (EN↔KO)
 │   ├── scripts/                 # 유틸리티 스크립트
@@ -94,8 +99,8 @@ agentic-orchestrator/
 ├── data/                        # 데이터 디렉토리
 │   ├── orchestrator.db          # SQLite 데이터베이스
 │   └── trends/                  # 트렌드 분석 결과 (마크다운)
-├── projects/                    # 생성된 프로젝트 (향후 기능)
-│   └── README.md                # 프로젝트 목록
+├── projects/                    # 자동 생성된 프로젝트
+│   └── {project-name}/          # LLM 생성 프로젝트 스캐폴드
 ├── docs/                        # 설계 문서
 │   ├── pipeline.md              # 아이디어 생성 파이프라인
 │   ├── labels.md                # GitHub 라벨 가이드
@@ -149,6 +154,11 @@ agentic-orchestrator/
 | GET | `/debates/{id}` | 토론 상세 (메시지 포함) |
 | GET | `/plans` | 기획 문서 목록 |
 | GET | `/plans/{id}` | 기획 문서 상세 |
+| POST | `/plans/{id}/generate-project` | Plan에서 프로젝트 생성 (비동기) |
+| GET | `/plans/{id}/project` | Plan의 프로젝트 조회 |
+| GET | `/projects` | 생성된 프로젝트 목록 |
+| GET | `/projects/{id}` | 프로젝트 상세 |
+| GET | `/jobs/{id}` | 비동기 작업 상태 조회 |
 | GET | `/agents` | 에이전트 목록 |
 | GET | `/adapters` | 시그널 어댑터 목록 및 상태 |
 | GET | `/usage` | API 사용량 통계 |
@@ -168,6 +178,7 @@ agentic-orchestrator/
 | `debate_sessions` | 토론 세션 | topic, phase, status, participants |
 | `debate_messages` | 토론 메시지 | agent_id, agent_name, message_type, content, content_ko |
 | `plans` | 기획 문서 | title, title_ko, final_plan, final_plan_ko, status |
+| `projects` | 생성된 프로젝트 | plan_id, name, directory_path, tech_stack, status |
 | `api_usage` | API 사용량 | provider, model, cost_usd, request_count |
 
 ### 중요 스키마 노트
@@ -459,8 +470,8 @@ curl -s http://localhost:11434/api/generate -d '{"model": "qwen2.5:32b", "keep_a
 
 ```
 Signals (30분) → Trends (2시간) → Debate (6시간) → Ideas → Auto-Score → Plans
-                      ↓                 ↑
-                 (트렌드 기반 토픽)
+                      ↓                 ↑                                  ↓
+                 (트렌드 기반 토픽)                               Projects (score ≥ 8.0)
 ```
 
 ### 아이디어 소스 유형
@@ -471,10 +482,11 @@ Signals (30분) → Trends (2시간) → Debate (6시간) → Ideas → Auto-Sco
 | `debate` | 멀티에이전트 토론에서 생성 | Ollama (로컬) |
 | `github_sync` | GitHub Issues에서 동기화 | - |
 
-### 자동 점수화 시스템
+### 자동 점수화 및 프로젝트 생성 시스템
 
 토론 완료 후 아이디어 자동 점수화:
-- **score >= 7.0**: `promoted` → 플랜 자동 생성
+- **score >= 8.0**: `promoted` → 플랜 자동 생성 + **프로젝트 자동 생성**
+- **score 7.0-8.0**: `promoted` → 플랜 자동 생성 (프로젝트는 수동 버튼)
 - **score 4.0-7.0**: `scored` → 백로그 대기
 - **score < 4.0**: `archived` → 아카이브
 
@@ -528,26 +540,71 @@ git commit -m "docs: update documentation for recent changes"
 - `style:` - UI/UX 변경
 - `chore:` - 기타 변경
 
-## 향후 구현 예정 기능
+## Plan → Project 자동 생성
 
-### Plan → Project 자동 생성
-
-**상태:** 구현 예정
+**상태:** ✅ 구현 완료
 
 승인된 Plan을 `projects/` 폴더에 실제 프로젝트로 변환하는 기능:
 
 ```
-Plan (DB) → 프로젝트 스캐폴드 생성 → projects/{project-name}/
+Plan (DB) → 파싱 → 스택 감지 → LLM 코드 생성 → projects/{project-name}/
 ```
 
-**계획된 기능:**
-- Plan 파싱 (마크다운 → 구조화된 데이터)
-- 프로젝트 폴더 자동 생성
-- README.md, PLAN.md 자동 생성
-- 기술 스택별 보일러플레이트 코드 생성 (LLM 활용)
-- 웹 UI에서 "Generate Project" 버튼
+### 트리거 전략
 
-자세한 내용: `docs/projects.md`
+- **자동 생성 (score ≥ 8.0)**: 토론 완료 후 Plan이 승인되면 자동으로 프로젝트 생성
+- **수동 생성 (score < 8.0)**: 웹 UI에서 "Generate Project" 버튼 클릭
+
+### 지원 기술 스택
+
+| 프론트엔드 | 백엔드 | 블록체인 |
+|------------|--------|----------|
+| Next.js + TypeScript | FastAPI + SQLAlchemy | Hardhat (Ethereum) |
+| React (Vite) | Express.js + TypeScript | Anchor (Solana) |
+| Vue 3 | | |
+
+### 작업별 LLM 모델
+
+| 작업 | 모델 | 용도 |
+|------|------|------|
+| Plan 파싱 | `glm-4.7-flash` | 마크다운 → 구조화된 데이터 |
+| 코드 생성 | `qwen2.5:32b` | 컴포넌트, API, 모델 생성 |
+| 아키텍처 설계 | `llama3.3:70b` | 복잡한 시스템 설계 |
+| 경량/폴백 | `phi4:14b` | 간단한 파일, 설정 |
+
+### 생성되는 프로젝트 구조
+
+```
+projects/{project-name}/
+├── README.md              # LLM 생성 (Plan 기반)
+├── PLAN.md                # 원본 Plan 문서
+├── .moss-project.json     # 메타데이터
+├── src/
+│   ├── frontend/          # Next.js (해당 시)
+│   └── backend/           # FastAPI (해당 시)
+├── contracts/             # Solidity (해당 시)
+├── docs/
+│   └── api.md
+└── tests/
+```
+
+### 설정 (`config.yaml`)
+
+```yaml
+project:
+  auto_generate:
+    enabled: true
+    min_score: 8.0        # 자동 생성 최소 점수
+    max_concurrent: 1     # 동시 생성 제한
+  llm:
+    parsing: "glm-4.7-flash"
+    code_generation: "qwen2.5:32b"
+    architecture: "llama3.3:70b"
+    fallback: "phi4:14b"
+  output_dir: "projects"
+```
+
+## 향후 구현 예정 기능
 
 ### GitHub 라벨 기반 승격 워크플로우
 

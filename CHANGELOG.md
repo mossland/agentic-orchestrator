@@ -7,6 +7,71 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] "Project Generator" - 2026-01-25
+
+### Added
+
+#### Plan → Project Automatic Generation
+- **Project Scaffold Module**: New `project/` package for automatic project generation from approved Plans
+  - `parser.py` - Parses Plan markdown into structured data (TechStack, APIEndpoint, ProjectTask)
+  - `templates.py` - Tech stack templates (Next.js, React, Vue, FastAPI, Express, Hardhat, Anchor)
+  - `generator.py` - LLM-based code generation with task-specific model routing
+  - `scaffold.py` - Orchestrates the full project generation pipeline
+- **Task-Specific LLM Models**: Different models for different tasks
+  - `glm-4.7-flash` - Fast plan parsing and structure extraction
+  - `qwen2.5:32b` - Main code generation (components, APIs, models)
+  - `llama3.3:70b` - Complex architecture design
+  - `phi4:14b` - Simple tasks and fallback
+- **Hybrid Trigger System**:
+  - **Auto-generation**: Plans with score ≥ 8.0 automatically generate projects
+  - **Manual button**: Lower-scored plans can trigger generation via UI
+- **Database Schema**: Added `projects` table
+  - `plan_id`, `name`, `directory_path`, `tech_stack` (JSON), `status`, `files_generated`
+- **Project Repository**: Full CRUD operations for projects
+
+#### New API Endpoints
+- `POST /plans/{plan_id}/generate-project` - Trigger async project generation
+- `GET /plans/{plan_id}/project` - Get project for a specific plan
+- `GET /projects` - List all generated projects
+- `GET /projects/{project_id}` - Project details
+- `GET /jobs/{job_id}` - Check async job status
+
+#### Frontend Updates
+- **Generate Project Button**: Added to `PlanDetail.tsx` for approved plans
+- **Project Status Display**: Shows generating spinner, ready state with tech stack badges, error state with retry
+- **Job Polling**: Automatic status polling during generation
+- **API Client Methods**: `generateProject()`, `getProjects()`, `getProjectDetail()`, `getJobStatus()`, `getPlanProject()`
+
+### Changed
+- Scheduler now integrates project auto-generation after debate completion
+- Plan creation now properly saves `final_plan` and `final_plan_ko` content
+- Pipeline flow extended: Ideas → Plans → Projects (for score ≥ 8.0)
+
+### Configuration
+New `project` section in `config.yaml`:
+```yaml
+project:
+  auto_generate:
+    enabled: true
+    min_score: 8.0
+    max_concurrent: 1
+  llm:
+    parsing: "glm-4.7-flash"
+    code_generation: "qwen2.5:32b"
+    architecture: "llama3.3:70b"
+    fallback: "phi4:14b"
+  output_dir: "projects"
+```
+
+### Technical
+- Added `ProjectScaffold`, `ProjectCodeGenerator`, `PlanParser`, `TemplateManager` classes
+- Added `Project` model and `ProjectRepository` to database layer
+- Added `_auto_generate_project()` and `_load_project_config()` to scheduler
+- Modified `_auto_score_and_save_ideas()` to pass `final_plan_content` for project generation
+- Added `ApiProject`, `GenerateProjectResponse`, `ProjectJobStatus` TypeScript types
+
+---
+
 ## [0.5.1] "Bilingual" - 2026-01-24
 
 ### Added

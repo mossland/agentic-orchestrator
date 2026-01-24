@@ -7,6 +7,71 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.6.0] "Project Generator" - 2026-01-25
+
+### 추가됨
+
+#### Plan → Project 자동 생성
+- **프로젝트 스캐폴드 모듈**: 승인된 Plan에서 자동 프로젝트 생성을 위한 새 `project/` 패키지
+  - `parser.py` - Plan 마크다운을 구조화된 데이터로 파싱 (TechStack, APIEndpoint, ProjectTask)
+  - `templates.py` - 기술 스택 템플릿 (Next.js, React, Vue, FastAPI, Express, Hardhat, Anchor)
+  - `generator.py` - 작업별 모델 라우팅이 있는 LLM 기반 코드 생성
+  - `scaffold.py` - 전체 프로젝트 생성 파이프라인 오케스트레이션
+- **작업별 LLM 모델**: 다른 작업에 다른 모델 사용
+  - `glm-4.7-flash` - 빠른 Plan 파싱 및 구조 추출
+  - `qwen2.5:32b` - 메인 코드 생성 (컴포넌트, API, 모델)
+  - `llama3.3:70b` - 복잡한 아키텍처 설계
+  - `phi4:14b` - 간단한 작업 및 폴백
+- **하이브리드 트리거 시스템**:
+  - **자동 생성**: 점수 ≥ 8.0인 Plan은 자동으로 프로젝트 생성
+  - **수동 버튼**: 낮은 점수의 Plan은 UI에서 생성 트리거 가능
+- **데이터베이스 스키마**: `projects` 테이블 추가
+  - `plan_id`, `name`, `directory_path`, `tech_stack` (JSON), `status`, `files_generated`
+- **프로젝트 리포지토리**: 프로젝트를 위한 전체 CRUD 작업
+
+#### 새 API 엔드포인트
+- `POST /plans/{plan_id}/generate-project` - 비동기 프로젝트 생성 트리거
+- `GET /plans/{plan_id}/project` - 특정 Plan의 프로젝트 조회
+- `GET /projects` - 생성된 모든 프로젝트 목록
+- `GET /projects/{project_id}` - 프로젝트 상세
+- `GET /jobs/{job_id}` - 비동기 작업 상태 확인
+
+#### 프론트엔드 업데이트
+- **Generate Project 버튼**: 승인된 Plan을 위해 `PlanDetail.tsx`에 추가
+- **프로젝트 상태 표시**: 생성 중 스피너, 준비 완료 상태의 기술 스택 배지, 오류 상태의 재시도 버튼
+- **작업 폴링**: 생성 중 자동 상태 폴링
+- **API 클라이언트 메서드**: `generateProject()`, `getProjects()`, `getProjectDetail()`, `getJobStatus()`, `getPlanProject()`
+
+### 변경됨
+- 스케줄러가 토론 완료 후 프로젝트 자동 생성 통합
+- Plan 생성 시 `final_plan` 및 `final_plan_ko` 콘텐츠를 올바르게 저장
+- 파이프라인 흐름 확장: Ideas → Plans → Projects (점수 ≥ 8.0인 경우)
+
+### 설정
+`config.yaml`에 새 `project` 섹션:
+```yaml
+project:
+  auto_generate:
+    enabled: true
+    min_score: 8.0
+    max_concurrent: 1
+  llm:
+    parsing: "glm-4.7-flash"
+    code_generation: "qwen2.5:32b"
+    architecture: "llama3.3:70b"
+    fallback: "phi4:14b"
+  output_dir: "projects"
+```
+
+### 기술 사항
+- `ProjectScaffold`, `ProjectCodeGenerator`, `PlanParser`, `TemplateManager` 클래스 추가
+- 데이터베이스 레이어에 `Project` 모델 및 `ProjectRepository` 추가
+- 스케줄러에 `_auto_generate_project()` 및 `_load_project_config()` 추가
+- `_auto_score_and_save_ideas()`가 프로젝트 생성을 위해 `final_plan_content` 전달하도록 수정
+- `ApiProject`, `GenerateProjectResponse`, `ProjectJobStatus` TypeScript 타입 추가
+
+---
+
 ## [0.5.1] "Bilingual" - 2026-01-24
 
 ### 추가됨

@@ -1351,3 +1351,157 @@ async def get_plan_project(
         "project": project.to_dict() if project else None,
         "plan_id": plan_id,
     }
+
+
+class ApprovePlanRequest(BaseModel):
+    """Request body for plan approval."""
+    generate_project: bool = False  # If True, also trigger project generation
+
+
+class ApprovePlanResponse(BaseModel):
+    """Response for plan approval."""
+    plan_id: str
+    status: str
+    message: str
+    job_id: Optional[str] = None
+
+
+@app.post("/plans/{plan_id}/approve", response_model=ApprovePlanResponse)
+async def approve_plan(
+    plan_id: str,
+    request: ApprovePlanRequest = ApprovePlanRequest(),
+    background_tasks: BackgroundTasks = None,
+    session: Session = Depends(get_session),
+):
+    """
+    Manually approve a draft plan for project generation.
+
+    This allows users to approve low-scoring plans that weren't auto-approved.
+    If generate_project=true, also triggers project generation immediately.
+
+    Use this for:
+    - Plans with score < 8.0 that weren't auto-approved
+    - Plans that need manual review before project generation
+    """
+    import uuid
+
+    plan_repo = PlanRepository(session)
+    plan = plan_repo.get_by_id(plan_id)
+
+    if not plan:
+        raise HTTPException(status_code=404, detail=f"Plan not found: {plan_id}")
+
+    if plan.status == "approved":
+        message = "Plan is already approved."
+        if request.generate_project:
+            # Check if project exists
+            project_repo = ProjectRepository(session)
+            existing = project_repo.get_by_plan(plan_id)
+            if existing and existing.status == "ready":
+                message += " Project already exists."
+            else:
+                # Trigger project generation
+                job_id = str(uuid.uuid4())[:8]
+                _project_jobs[job_id] = {
+                    "job_id": job_id,
+                    "plan_id": plan_id,
+                    "status": "pending",
+                    "created_at": datetime.utcnow().isoformat(),
+                }
+                if background_tasks:
+                    background_tasks.add_task(
+                        _generate_project_task, job_id, plan_id, False
+                    )
+                else:
+                    import asyncio
+                    asyncio.create_task(_generate_project_task(job_id, plan_id, False))
+                return ApprovePlanResponse(
+                    plan_id=plan_id,
+                    status="approved",
+                    message="Plan already approved. Project generation started.",
+                    job_id=job_id,
+                )
+        return ApprovePlanResponse(
+            plan_id=plan_id,
+            status="approved",
+            message=message,
+        )
+
+    # Approve the plan
+    plan.status = "approved"
+    if plan.extra_metadata is None:
+        plan.extra_metadata = {}
+    plan.extra_metadata["manually_approved"] = True
+    plan.extra_metadata["approved_at"] = datetime.utcnow().isoformat()
+    session.commit()
+
+    job_id = None
+    message = f"Plan approved successfully."
+
+    # Optionally generate project
+    if request.generate_project:
+        job_id = str(uuid.uuid4())[:8]
+        _project_jobs[job_id] = {
+            "job_id": job_id,
+            "plan_id": plan_id,
+            "status": "pending",
+            "created_at": datetime.utcnow().isoformat(),
+        }
+        if background_tasks:
+            background_tasks.add_task(
+                _generate_project_task, job_id, plan_id, False
+            )
+        else:
+            import asyncio
+            asyncio.create_task(_generate_project_task(job_id, plan_id, False))
+        message = "Plan approved and project generation started."
+
+    return ApprovePlanResponse(
+        plan_id=plan_id,
+        status="approved",
+        message=message,
+        job_id=job_id,
+    )
+
+
+@app.get("/plans/pending-approval")
+async def get_pending_approval_plans(
+    limit: int = Query(default=20, le=100),
+    session: Session = Depends(get_session),
+):
+    """
+    Get plans that are pending approval (draft status, not yet approved).
+
+    These are typically lower-scoring plans (score < 8.0) that weren't auto-approved.
+    Users can manually approve these via POST /plans/{plan_id}/approve.
+    """
+    plan_repo = PlanRepository(session)
+
+    # Get draft plans
+    plans = plan_repo.get_by_status("draft", limit=limit)
+
+    # Get idea scores for context
+    idea_repo = IdeaRepository(session)
+
+    result = []
+    for plan in plans:
+        plan_dict = plan.to_dict()
+
+        # Get associated idea score if available
+        if plan.idea_id:
+            idea = idea_repo.get_by_id(plan.idea_id)
+            if idea:
+                plan_dict["idea_score"] = idea.score
+                plan_dict["idea_title"] = idea.title
+
+        # Check if auto-approval threshold info is available
+        if plan.extra_metadata:
+            plan_dict["promotion_score"] = plan.extra_metadata.get("promotion_score")
+
+        result.append(plan_dict)
+
+    return {
+        "plans": result,
+        "total": len(result),
+        "message": "These plans are pending approval. Use POST /plans/{plan_id}/approve to approve.",
+    }

@@ -7,6 +7,45 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.6.3] - 2026-01-25
+
+### 추가됨
+
+#### 프로덕션 수준 코드 생성
+- **향상된 Plan 파서**: 포괄적인 추출을 위한 Deep LLM 파싱
+  - 새 데이터클래스: `DataEntity`, `ExternalService`, `UIComponent`, `SmartContractSpec`
+  - 상세 엔티티, 서비스, 컴포넌트 추출을 위한 `parse_deep_with_llm()`
+  - 외부 서비스 탐지 (Twitter API, Coingecko, Etherscan, WebSocket 등)
+- **풀 프로젝트 제너레이터**: 스캐폴드 대신 프로덕션 레디 코드
+  - `generate_full_project()` - 고품질 생성을 위한 메인 진입점
+  - 비즈니스 로직이 포함된 완전한 FastAPI/Express 백엔드
+  - 모든 페이지와 컴포넌트가 포함된 완전한 Next.js/React 프론트엔드
+  - Hardhat 테스트 프레임워크가 포함된 Solidity 스마트 컨트랙트
+  - 외부 서비스 통합 레이어
+  - 데이터베이스 스키마 및 마이그레이션
+  - Docker 설정
+
+#### 우선순위 기반 프로젝트 생성
+- **고우선순위 Plan 자동 생성**: 점수 >= 8.0
+  - Plan 자동 승인 및 프로젝트 생성 트리거
+  - `config.yaml`에서 임계값 설정 가능 (`project.auto_generate.min_score`)
+- **저우선순위 Plan 수동 승인**: 점수 < 8.0
+  - "draft" 상태로 Plan 생성
+  - 프로젝트 생성 전 수동 승인 필요
+
+#### 수동 제어를 위한 새 API 엔드포인트
+- `POST /plans/{plan_id}/approve` - Draft plan 수동 승인
+  - 즉시 프로젝트 생성 트리거 옵션 (`generate_project=true`)
+  - 사용자가 어떤 낮은 점수 Plan을 개발할지 제어 가능
+- `GET /plans/pending-approval` - 수동 승인 대기 중인 draft plan 목록
+  - 결정 컨텍스트를 위한 아이디어 점수 표시
+
+### 변경됨
+- 커밋 메시지가 "scaffold"에서 "production-quality code"로 변경
+- 프로젝트 생성 파이프라인이 이제 완전한, 실행 가능한 코드 생성
+
+---
+
 ## [0.6.2] - 2026-01-25
 
 ### 추가됨

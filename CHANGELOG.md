@@ -7,6 +7,45 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2026-01-25
+
+### Added
+
+#### Production-Quality Code Generation
+- **Enhanced Plan Parser**: Deep LLM parsing with comprehensive extraction
+  - New dataclasses: `DataEntity`, `ExternalService`, `UIComponent`, `SmartContractSpec`
+  - `parse_deep_with_llm()` for detailed entity, service, and component extraction
+  - External service detection (Twitter API, Coingecko, Etherscan, WebSocket, etc.)
+- **Full Project Generator**: Production-ready code instead of scaffolds
+  - `generate_full_project()` - Main entry point for high-quality generation
+  - Complete FastAPI/Express backend with business logic
+  - Complete Next.js/React frontend with all pages and components
+  - Solidity smart contracts with Hardhat test framework
+  - External service integration layers
+  - Database schemas and migrations
+  - Docker configuration
+
+#### Priority-Based Project Generation
+- **Auto-Generation for High-Priority Plans**: Score >= 8.0
+  - Plans auto-approved and project generation triggered
+  - Configurable threshold via `config.yaml` (`project.auto_generate.min_score`)
+- **Manual Approval for Lower-Priority Plans**: Score < 8.0
+  - Plans created with "draft" status
+  - Requires manual approval before project generation
+
+#### New API Endpoints for Manual Control
+- `POST /plans/{plan_id}/approve` - Manually approve draft plans
+  - Option to trigger project generation immediately (`generate_project=true`)
+  - Allows users to control which low-scoring plans get developed
+- `GET /plans/pending-approval` - List draft plans awaiting manual approval
+  - Shows idea scores for decision context
+
+### Changed
+- Commit message updated from "scaffold" to "production-quality code"
+- Project generation pipeline now produces complete, runnable code
+
+---
+
 ## [0.6.2] - 2026-01-25
 
 ### Added

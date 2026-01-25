@@ -7,6 +7,23 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.4] - 2026-01-25
+
+### Added
+
+#### Dynamic Detail Pages for External Link Access
+- **Direct URL Access**: External links now resolve to dedicated detail pages
+  - `/signals/{id}` - Signal detail page
+  - `/ideas/{id}` - Idea detail page
+  - `/plans/{id}` - Plan detail page
+  - `/projects/{id}` - Project detail page
+- **SEO-Optimized Metadata**: Open Graph and Twitter card support for link sharing
+- **New Backend Endpoint**: `GET /signals/{signal_id}` for single signal retrieval
+- **Shared Layout Component**: `DetailPageLayout` with navigation, loading/error states
+- **Multilingual Support**: Full EN/KO localization for detail pages
+
+---
+
 ## [0.6.3] - 2026-01-25
 
 ### Added

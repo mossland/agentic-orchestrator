@@ -393,6 +393,10 @@ export class ApiClient {
     return apiFetch<SignalsResponse>(`/signals${query ? `?${query}` : ''}`);
   }
 
+  static async getSignalDetail(signalId: string): Promise<ApiResponse<ApiSignal>> {
+    return apiFetch<ApiSignal>(`/signals/${signalId}`);
+  }
+
   // Trends
   static async getTrends(params?: {
     limit?: number;

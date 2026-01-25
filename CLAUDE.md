@@ -147,6 +147,7 @@ agentic-orchestrator/
 |--------|------|------|
 | GET | `/status` | 시스템 상태 및 통계 |
 | GET | `/signals` | 수집된 신호 목록 |
+| GET | `/signals/{id}` | 시그널 상세 정보 |
 | GET | `/trends` | 분석된 트렌드 |
 | GET | `/ideas` | 아이디어 백로그 |
 | GET | `/ideas/{id}` | 아이디어 상세 |

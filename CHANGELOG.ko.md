@@ -7,6 +7,23 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.6.4] - 2026-01-25
+
+### 추가됨
+
+#### 외부 링크 접근을 위한 동적 상세 페이지
+- **직접 URL 접근**: 외부 링크가 전용 상세 페이지로 연결
+  - `/signals/{id}` - 시그널 상세 페이지
+  - `/ideas/{id}` - 아이디어 상세 페이지
+  - `/plans/{id}` - 플랜 상세 페이지
+  - `/projects/{id}` - 프로젝트 상세 페이지
+- **SEO 최적화 메타데이터**: 링크 공유를 위한 Open Graph 및 Twitter 카드 지원
+- **새 백엔드 엔드포인트**: `GET /signals/{signal_id}` 단일 시그널 조회
+- **공유 레이아웃 컴포넌트**: 네비게이션, 로딩/에러 상태가 포함된 `DetailPageLayout`
+- **다국어 지원**: 상세 페이지에 EN/KO 로컬라이제이션 완전 지원
+
+---
+
 ## [0.6.3] - 2026-01-25
 
 ### 추가됨

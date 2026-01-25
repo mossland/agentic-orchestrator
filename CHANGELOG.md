@@ -7,6 +7,32 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2026-01-25
+
+### Added
+
+#### Pipeline Projects Stage
+- **Pipeline Modal Support**: Projects stage now fully supported in pipeline status modal
+  - Fetch and display projects with status badges
+  - "View All Projects" button navigates to `/projects`
+  - Empty state with helpful guidance
+- **View Code on GitHub Button**: New prominent button in ProjectDetail modal
+  - Links directly to project code directory: `github.com/.../tree/main/projects/{project-name}`
+  - Separate from Issue link for clarity
+
+#### Auto-Push to GitHub
+- **Automatic Git Commit/Push**: Generated projects are now auto-committed and pushed
+  - After scaffold generation, automatically runs `git add`, `git commit`, `git push`
+  - Commit message: `feat: auto-generate project scaffold for {project-name}`
+  - Push failure doesn't block project creation (warning logged)
+
+### Fixed
+- **PipelineDetail Projects Stage**: Fixed modal showing only "#" text when clicking Projects
+  - Added `projects` stageId handling in data fetch
+  - Added proper description, empty state emoji, and navigation
+
+---
+
 ## [0.6.1] - 2026-01-25
 
 ### Added

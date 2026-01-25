@@ -7,6 +7,32 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.6.2] - 2026-01-25
+
+### 추가됨
+
+#### 파이프라인 프로젝트 스테이지
+- **파이프라인 모달 지원**: 파이프라인 상태 모달에서 Projects 스테이지 완전 지원
+  - 상태 배지와 함께 프로젝트 가져오기 및 표시
+  - "View All Projects" 버튼으로 `/projects` 페이지 이동
+  - 도움말이 있는 빈 상태 표시
+- **GitHub에서 코드 보기 버튼**: ProjectDetail 모달에 새 버튼 추가
+  - 프로젝트 코드 디렉토리로 직접 링크: `github.com/.../tree/main/projects/{project-name}`
+  - Issue 링크와 분리하여 명확하게 구분
+
+#### GitHub 자동 푸시
+- **자동 Git 커밋/푸시**: 생성된 프로젝트가 자동으로 커밋 및 푸시됨
+  - 스캐폴드 생성 후 자동으로 `git add`, `git commit`, `git push` 실행
+  - 커밋 메시지: `feat: auto-generate project scaffold for {project-name}`
+  - 푸시 실패 시 프로젝트 생성은 차단되지 않음 (경고 로그만 출력)
+
+### 수정됨
+- **PipelineDetail Projects 스테이지**: Projects 클릭 시 "#" 텍스트만 표시되는 문제 수정
+  - 데이터 가져오기에 `projects` stageId 처리 추가
+  - 적절한 설명, 빈 상태 이모지, 네비게이션 추가
+
+---
+
 ## [0.6.1] - 2026-01-25
 
 ### 추가됨

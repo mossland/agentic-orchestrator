@@ -129,15 +129,21 @@ class ProjectScaffold:
                     error="Project already exists. Use force_regenerate=True to regenerate.",
                 )
 
-            # Parse plan content
+            # Parse plan content with deep extraction
             logger.info(f"Parsing plan: {plan_id}")
             plan_content = plan.get("final_plan") or plan.get("prd_content") or ""
             plan_title = plan.get("title") or "Untitled Project"
 
             if self.router:
-                parsed_plan = await self.parser.parse_with_llm(plan_content, plan_title)
+                # Use deep parsing for comprehensive extraction
+                logger.info("Using deep LLM parsing for high-quality code generation")
+                parsed_plan = await self.parser.parse_deep_with_llm(plan_content, plan_title)
             else:
                 parsed_plan = self.parser.parse(plan_content, plan_title)
+
+            logger.info(f"Parsed: {len(parsed_plan.entities)} entities, "
+                       f"{len(parsed_plan.api_endpoints)} endpoints, "
+                       f"{len(parsed_plan.ui_components)} UI components")
 
             # Generate project name
             project_name = self._generate_project_name(parsed_plan.title)
@@ -151,22 +157,34 @@ class ProjectScaffold:
                 status="generating",
             )
 
-            # Generate template files
-            template_files = self.templates.get_template_files(
-                frontend=parsed_plan.tech_stack.frontend,
-                backend=parsed_plan.tech_stack.backend,
-                database=parsed_plan.tech_stack.database,
-                blockchain=parsed_plan.tech_stack.blockchain,
-            )
+            # Generate full production-quality project code
+            logger.info("Generating production-quality project code...")
+            logger.info(f"Tech stack: {parsed_plan.tech_stack.to_dict()}")
 
-            # Generate LLM-enhanced files
-            llm_files = await self._generate_llm_files(parsed_plan, project_name)
-
-            # Combine all files
-            all_files = template_files + [
-                TemplateFile(path=f.path, content=f.content)
-                for f in llm_files
-            ]
+            if self.router:
+                # Use full project generation for high-quality code
+                generated_files = await self.generator.generate_full_project(
+                    parsed_plan, project_name
+                )
+                all_files = [
+                    TemplateFile(path=f.path, content=f.content)
+                    for f in generated_files
+                ]
+                logger.info(f"Generated {len(all_files)} production-quality files")
+            else:
+                # Fallback: Use template files + basic LLM generation
+                template_files = self.templates.get_template_files(
+                    frontend=parsed_plan.tech_stack.frontend,
+                    backend=parsed_plan.tech_stack.backend,
+                    database=parsed_plan.tech_stack.database,
+                    blockchain=parsed_plan.tech_stack.blockchain,
+                )
+                llm_files = await self._generate_llm_files(parsed_plan, project_name)
+                all_files = template_files + [
+                    TemplateFile(path=f.path, content=f.content)
+                    for f in llm_files
+                ]
+                logger.info(f"Generated {len(all_files)} files (fallback mode)")
 
             # Add PLAN.md (copy of original plan)
             all_files.append(TemplateFile(
@@ -427,7 +445,7 @@ class ProjectScaffold:
                 return False
 
             # Create commit message
-            commit_message = f"feat: auto-generate project scaffold for {project_name}"
+            commit_message = f"feat: generate production-quality code for {project_name}"
 
             # Commit the changes
             commit_result = subprocess.run(

@@ -1,6 +1,8 @@
 """
 LLM-based code generation for project scaffolding.
 
+Enhanced for high-quality, production-ready code generation.
+
 Uses task-based model selection for optimal code generation:
 - glm-4.7-flash: Plan parsing (18GB, fast)
 - qwen2.5:32b: Code generation (19GB, balanced)
@@ -10,10 +12,14 @@ Uses task-based model selection for optimal code generation:
 
 import logging
 import re
+import asyncio
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 
-from .parser import ParsedPlan, TechStack
+from .parser import (
+    ParsedPlan, TechStack, DataEntity, ExternalService,
+    UIComponent, SmartContractSpec, APIEndpoint
+)
 
 logger = logging.getLogger(__name__)
 
@@ -662,3 +668,2167 @@ Output ONLY the Vue SFC code, no markdown or explanations."""
         except Exception as e:
             logger.warning(f"Failed to generate Vue component {name}: {e}")
             return None
+
+    # ========================================
+    # HIGH-QUALITY CODE GENERATION METHODS
+    # ========================================
+
+    async def generate_full_project(
+        self,
+        parsed_plan: ParsedPlan,
+        project_name: str,
+    ) -> List[GeneratedFile]:
+        """
+        Generate a complete, production-ready project from parsed plan.
+
+        This is the main entry point for high-quality code generation.
+        """
+        files = []
+
+        logger.info(f"Starting full project generation for: {project_name}")
+        logger.info(f"Tech stack: {parsed_plan.tech_stack.to_dict()}")
+        logger.info(f"Entities: {len(parsed_plan.entities)}, Endpoints: {len(parsed_plan.api_endpoints)}")
+        logger.info(f"UI Components: {len(parsed_plan.ui_components)}, Contracts: {len(parsed_plan.smart_contracts)}")
+
+        # 1. Generate README
+        readme = await self.generate_readme(parsed_plan, project_name)
+        files.append(GeneratedFile("README.md", readme, "Project README"))
+
+        # 2. Generate Architecture Documentation
+        arch_doc = await self.generate_architecture_doc(parsed_plan, project_name)
+        files.append(GeneratedFile("docs/ARCHITECTURE.md", arch_doc, "Architecture documentation"))
+
+        # 3. Generate Backend (if backend specified)
+        if parsed_plan.tech_stack.backend:
+            backend_files = await self.generate_full_backend(parsed_plan)
+            files.extend(backend_files)
+            logger.info(f"Generated {len(backend_files)} backend files")
+
+        # 4. Generate Frontend (if frontend specified)
+        if parsed_plan.tech_stack.frontend:
+            frontend_files = await self.generate_full_frontend(parsed_plan, project_name)
+            files.extend(frontend_files)
+            logger.info(f"Generated {len(frontend_files)} frontend files")
+
+        # 5. Generate Smart Contracts (if blockchain specified)
+        if parsed_plan.tech_stack.blockchain:
+            contract_files = await self.generate_smart_contracts_full(parsed_plan)
+            files.extend(contract_files)
+            logger.info(f"Generated {len(contract_files)} contract files")
+
+        # 6. Generate Service Layer for External APIs
+        if parsed_plan.external_services:
+            service_files = await self.generate_external_services(parsed_plan)
+            files.extend(service_files)
+            logger.info(f"Generated {len(service_files)} service files")
+
+        # 7. Generate Database Schema/Migrations
+        if parsed_plan.entities and parsed_plan.tech_stack.database:
+            db_files = await self.generate_database_layer(parsed_plan)
+            files.extend(db_files)
+            logger.info(f"Generated {len(db_files)} database files")
+
+        # 8. Generate API Documentation
+        if parsed_plan.api_endpoints:
+            api_doc = await self.generate_api_documentation(parsed_plan)
+            files.append(GeneratedFile("docs/api.md", api_doc, "API documentation"))
+
+        # 9. Generate Environment Configuration
+        env_files = self._generate_env_files(parsed_plan)
+        files.extend(env_files)
+
+        # 10. Generate Docker Configuration
+        docker_files = await self.generate_docker_config(parsed_plan, project_name)
+        files.extend(docker_files)
+
+        logger.info(f"Total files generated: {len(files)}")
+        return files
+
+    async def generate_full_backend(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate complete backend with all endpoints and business logic."""
+        files = []
+        backend = parsed_plan.tech_stack.backend
+
+        if backend == "fastapi":
+            files.extend(await self._generate_fastapi_backend(parsed_plan))
+        elif backend in ["express", "nodejs"]:
+            files.extend(await self._generate_express_backend(parsed_plan))
+
+        return files
+
+    async def _generate_fastapi_backend(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate FastAPI backend structure."""
+        files = []
+
+        # Generate main app
+        main_content = await self._generate_fastapi_main(parsed_plan)
+        files.append(GeneratedFile("src/backend/app/main.py", main_content, "FastAPI main application"))
+
+        # Generate models
+        if parsed_plan.entities:
+            models_content = await self._generate_sqlalchemy_models(parsed_plan)
+            files.append(GeneratedFile("src/backend/app/models.py", models_content, "SQLAlchemy models"))
+
+        # Generate schemas (Pydantic)
+        if parsed_plan.entities:
+            schemas_content = await self._generate_pydantic_schemas(parsed_plan)
+            files.append(GeneratedFile("src/backend/app/schemas.py", schemas_content, "Pydantic schemas"))
+
+        # Generate routers for each resource
+        for endpoint in parsed_plan.api_endpoints[:15]:  # Limit to prevent timeout
+            resource = endpoint.path.strip('/').split('/')[0] if endpoint.path else "main"
+            if resource and resource not in ["api"]:
+                router_file = await self._generate_fastapi_router_full(
+                    resource,
+                    [e for e in parsed_plan.api_endpoints if resource in e.path],
+                    parsed_plan
+                )
+                if router_file:
+                    files.append(router_file)
+
+        # Generate database config
+        db_config = self._generate_fastapi_db_config(parsed_plan)
+        files.append(GeneratedFile("src/backend/app/database.py", db_config, "Database configuration"))
+
+        # Generate requirements.txt
+        requirements = self._generate_python_requirements(parsed_plan)
+        files.append(GeneratedFile("src/backend/requirements.txt", requirements, "Python dependencies"))
+
+        return files
+
+    async def _generate_fastapi_main(self, parsed_plan: ParsedPlan) -> str:
+        """Generate FastAPI main.py with comprehensive setup."""
+        if not self.router:
+            return self._generate_fastapi_main_template(parsed_plan)
+
+        prompt = f"""Generate a production-ready FastAPI main.py application.
+
+Project Summary: {parsed_plan.summary}
+
+Features to implement:
+{chr(10).join('- ' + f for f in parsed_plan.features[:10])}
+
+External Services to integrate:
+{chr(10).join('- ' + s.name + ': ' + s.purpose for s in parsed_plan.external_services[:5])}
+
+Requirements:
+1. CORS middleware configured
+2. Exception handlers
+3. Lifespan events for startup/shutdown
+4. Health check endpoint
+5. API router includes
+6. Environment variable configuration
+7. Logging setup
+8. Rate limiting (optional)
+
+Output ONLY the Python code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+            content = self._clean_code_response(response.content, "python")
+            return content
+        except Exception as e:
+            logger.error(f"Failed to generate FastAPI main: {e}")
+            return self._generate_fastapi_main_template(parsed_plan)
+
+    def _generate_fastapi_main_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback template for FastAPI main."""
+        return '''"""
+FastAPI Application - Generated by MOSS.AO
+"""
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+import logging
+import os
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan events."""
+    logger.info("Application starting up...")
+    yield
+    logger.info("Application shutting down...")
+
+
+app = FastAPI(
+    title="API Server",
+    description="Generated by MOSS.AO",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+@app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"message": "API is running", "status": "healthy"}
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy"}
+
+
+# Import and include routers here
+# from app.routers import users, items
+# app.include_router(users.router, prefix="/api/users", tags=["users"])
+'''
+
+    async def _generate_sqlalchemy_models(self, parsed_plan: ParsedPlan) -> str:
+        """Generate SQLAlchemy models from entities."""
+        if not self.router or not parsed_plan.entities:
+            return self._generate_sqlalchemy_models_template(parsed_plan)
+
+        entities_desc = "\n".join([
+            f"Entity: {e.name}\n  Description: {e.description}\n  Fields: {e.fields}\n  Relationships: {e.relationships}"
+            for e in parsed_plan.entities[:10]
+        ])
+
+        prompt = f"""Generate SQLAlchemy models for these entities.
+
+{entities_desc}
+
+Database: {parsed_plan.tech_stack.database or 'postgresql'}
+
+Requirements:
+1. Use SQLAlchemy 2.0 declarative syntax
+2. Include proper type hints
+3. Add relationships with back_populates
+4. Include common fields: id (UUID), created_at, updated_at
+5. Add docstrings
+6. Include __repr__ methods
+
+Output ONLY the Python code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=3000,
+            )
+            return self._clean_code_response(response.content, "python")
+        except Exception as e:
+            logger.error(f"Failed to generate models: {e}")
+            return self._generate_sqlalchemy_models_template(parsed_plan)
+
+    def _generate_sqlalchemy_models_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback template for SQLAlchemy models."""
+        models = []
+        for entity in parsed_plan.entities[:10]:
+            models.append(f'''
+class {entity.name}(Base):
+    """{entity.description}"""
+    __tablename__ = "{entity.name.lower()}s"
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    def __repr__(self):
+        return f"<{entity.name}(id={{self.id}})>"
+''')
+
+        return f'''"""
+Database Models - Generated by MOSS.AO
+"""
+import uuid
+from datetime import datetime
+from sqlalchemy import Column, String, DateTime, Integer, Float, Boolean, ForeignKey, Text
+from sqlalchemy.orm import relationship, declarative_base
+
+Base = declarative_base()
+
+{"".join(models)}
+'''
+
+    async def _generate_pydantic_schemas(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Pydantic schemas for API validation."""
+        if not self.router or not parsed_plan.entities:
+            return self._generate_pydantic_schemas_template(parsed_plan)
+
+        entities_desc = "\n".join([
+            f"Entity: {e.name} - {e.description}"
+            for e in parsed_plan.entities[:10]
+        ])
+
+        prompt = f"""Generate Pydantic schemas for these entities for FastAPI request/response validation.
+
+{entities_desc}
+
+Requirements:
+1. Use Pydantic v2 syntax
+2. Create Base, Create, Update, and Response schemas for each entity
+3. Include proper type hints and Optional fields
+4. Add Field validators where appropriate
+5. Include examples in schema config
+
+Output ONLY the Python code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+            return self._clean_code_response(response.content, "python")
+        except Exception as e:
+            logger.error(f"Failed to generate schemas: {e}")
+            return self._generate_pydantic_schemas_template(parsed_plan)
+
+    def _generate_pydantic_schemas_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback template for Pydantic schemas."""
+        schemas = []
+        for entity in parsed_plan.entities[:10]:
+            schemas.append(f'''
+class {entity.name}Base(BaseModel):
+    """{entity.description} base schema."""
+    pass
+
+
+class {entity.name}Create({entity.name}Base):
+    """Schema for creating {entity.name}."""
+    pass
+
+
+class {entity.name}Update({entity.name}Base):
+    """Schema for updating {entity.name}."""
+    pass
+
+
+class {entity.name}Response({entity.name}Base):
+    """Response schema for {entity.name}."""
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+''')
+
+        return f'''"""
+Pydantic Schemas - Generated by MOSS.AO
+"""
+from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, ConfigDict, Field
+
+{"".join(schemas)}
+'''
+
+    async def _generate_fastapi_router_full(
+        self,
+        resource: str,
+        endpoints: List[APIEndpoint],
+        parsed_plan: ParsedPlan,
+    ) -> Optional[GeneratedFile]:
+        """Generate a complete FastAPI router with business logic."""
+        if not self.router:
+            return None
+
+        endpoints_desc = "\n".join([
+            f"- {e.method} {e.path}: {e.description}"
+            for e in endpoints[:10]
+        ])
+
+        # Find related entity
+        related_entity = None
+        for entity in parsed_plan.entities:
+            if entity.name.lower() in resource.lower() or resource.lower() in entity.name.lower():
+                related_entity = entity
+                break
+
+        entity_info = ""
+        if related_entity:
+            entity_info = f"""
+Related Entity: {related_entity.name}
+Description: {related_entity.description}
+Fields: {related_entity.fields}
+"""
+
+        prompt = f"""Generate a complete FastAPI router for the "{resource}" resource with full implementation.
+
+Endpoints to implement:
+{endpoints_desc}
+
+{entity_info}
+
+Project Context:
+{parsed_plan.summary[:500]}
+
+Requirements:
+1. Use FastAPI's APIRouter
+2. Implement FULL business logic, not just stubs
+3. Include proper error handling with HTTPException
+4. Use dependency injection for database session
+5. Include Pydantic models for request/response
+6. Add comprehensive docstrings
+7. Include pagination for list endpoints
+8. Add filtering and sorting where appropriate
+
+This should be PRODUCTION-READY code, not placeholder stubs.
+
+Output ONLY the Python code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=3000,
+            )
+
+            content = self._clean_code_response(response.content, "python")
+
+            return GeneratedFile(
+                path=f"src/backend/app/routers/{resource}.py",
+                content=content,
+                description=f"FastAPI router for {resource}",
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate router for {resource}: {e}")
+            return None
+
+    async def _generate_express_backend(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate Express.js backend structure."""
+        files = []
+
+        # Generate main app
+        main_content = await self._generate_express_main(parsed_plan)
+        files.append(GeneratedFile("src/backend/src/index.ts", main_content, "Express main application"))
+
+        # Generate models
+        if parsed_plan.entities:
+            models_content = await self._generate_prisma_schema(parsed_plan)
+            files.append(GeneratedFile("src/backend/prisma/schema.prisma", models_content, "Prisma schema"))
+
+            types_content = await self._generate_typescript_types(parsed_plan)
+            files.append(GeneratedFile("src/backend/src/types/index.ts", types_content, "TypeScript types"))
+
+        # Generate routes
+        routes_index = []
+        for endpoint in parsed_plan.api_endpoints[:10]:
+            resource = endpoint.path.strip('/').split('/')[0] if endpoint.path else "main"
+            if resource and resource not in ["api"] and resource not in routes_index:
+                routes_index.append(resource)
+                route_file = await self._generate_express_router_full(
+                    resource,
+                    [e for e in parsed_plan.api_endpoints if resource in e.path],
+                    parsed_plan
+                )
+                if route_file:
+                    files.append(route_file)
+
+        # Generate package.json
+        package_json = self._generate_node_package_json(parsed_plan)
+        files.append(GeneratedFile("src/backend/package.json", package_json, "Node.js dependencies"))
+
+        # Generate tsconfig.json
+        tsconfig = self._generate_tsconfig()
+        files.append(GeneratedFile("src/backend/tsconfig.json", tsconfig, "TypeScript configuration"))
+
+        return files
+
+    async def _generate_express_main(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Express.js main application."""
+        if not self.router:
+            return self._generate_express_main_template(parsed_plan)
+
+        prompt = f"""Generate a production-ready Express.js/TypeScript main application.
+
+Project Summary: {parsed_plan.summary}
+
+Features:
+{chr(10).join('- ' + f for f in parsed_plan.features[:8])}
+
+External Services:
+{chr(10).join('- ' + s.name for s in parsed_plan.external_services[:5])}
+
+Requirements:
+1. Use TypeScript with strict types
+2. CORS configuration
+3. JSON body parser
+4. Error handling middleware
+5. Request logging
+6. Graceful shutdown handling
+7. Environment variable configuration
+8. Health check endpoint
+9. WebSocket support if real-time features mentioned
+
+Output ONLY the TypeScript code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+            return self._clean_code_response(response.content, "typescript")
+        except Exception as e:
+            logger.error(f"Failed to generate Express main: {e}")
+            return self._generate_express_main_template(parsed_plan)
+
+    def _generate_express_main_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback Express.js template."""
+        has_websocket = any("websocket" in s.name.lower() or "real-time" in s.purpose.lower()
+                          for s in parsed_plan.external_services)
+
+        ws_import = "import { WebSocketServer } from 'ws';" if has_websocket else ""
+        ws_setup = """
+// WebSocket server setup
+const wss = new WebSocketServer({ server });
+
+wss.on('connection', (ws) => {
+  console.log('Client connected');
+
+  ws.on('message', (message) => {
+    console.log('Received:', message.toString());
+  });
+
+  ws.on('close', () => {
+    console.log('Client disconnected');
+  });
+});
+""" if has_websocket else ""
+
+        return f'''import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import dotenv from 'dotenv';
+import {{ createServer }} from 'http';
+{ws_import}
+
+dotenv.config();
+
+const app = express();
+const port = process.env.PORT || 3001;
+const server = createServer(app);
+
+// Middleware
+app.use(helmet());
+app.use(cors({{
+  origin: process.env.CORS_ORIGINS?.split(',') || '*',
+  credentials: true,
+}}));
+app.use(express.json());
+
+// Request logging
+app.use((req, res, next) => {{
+  console.log(`${{new Date().toISOString()}} ${{req.method}} ${{req.path}}`);
+  next();
+}});
+
+// Health check
+app.get('/health', (req, res) => {{
+  res.json({{ status: 'healthy', timestamp: new Date().toISOString() }});
+}});
+
+// API routes
+app.get('/', (req, res) => {{
+  res.json({{ message: 'API Server', version: '1.0.0' }});
+}});
+
+// Import routes here
+// import usersRouter from './routes/users';
+// app.use('/api/users', usersRouter);
+
+{ws_setup}
+
+// Error handling middleware
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {{
+  console.error('Error:', err);
+  res.status(500).json({{ error: 'Internal server error' }});
+}});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {{
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {{
+    console.log('Server closed');
+    process.exit(0);
+  }});
+}});
+
+server.listen(port, () => {{
+  console.log(`Server running on port ${{port}}`);
+}});
+
+export default app;
+'''
+
+    async def _generate_express_router_full(
+        self,
+        resource: str,
+        endpoints: List[APIEndpoint],
+        parsed_plan: ParsedPlan,
+    ) -> Optional[GeneratedFile]:
+        """Generate Express.js router with full implementation."""
+        if not self.router:
+            return None
+
+        endpoints_desc = "\n".join([
+            f"- {e.method} {e.path}: {e.description}"
+            for e in endpoints[:10]
+        ])
+
+        prompt = f"""Generate a complete Express.js/TypeScript router for "{resource}" with full implementation.
+
+Endpoints:
+{endpoints_desc}
+
+Project Context: {parsed_plan.summary[:300]}
+
+Requirements:
+1. Use Express Router with TypeScript
+2. Implement FULL business logic, not stubs
+3. Use async/await with proper error handling
+4. Include request validation
+5. Include proper TypeScript types
+6. Add pagination, filtering, sorting for list endpoints
+
+Output ONLY the TypeScript code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+
+            content = self._clean_code_response(response.content, "typescript")
+
+            return GeneratedFile(
+                path=f"src/backend/src/routes/{resource}.ts",
+                content=content,
+                description=f"Express router for {resource}",
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate Express router: {e}")
+            return None
+
+    async def generate_full_frontend(
+        self,
+        parsed_plan: ParsedPlan,
+        project_name: str,
+    ) -> List[GeneratedFile]:
+        """Generate complete frontend with all pages and components."""
+        files = []
+        frontend = parsed_plan.tech_stack.frontend
+
+        if frontend in ["nextjs", "react"]:
+            # Generate layout
+            layout = await self._generate_nextjs_layout(parsed_plan, project_name)
+            files.append(GeneratedFile("src/frontend/src/app/layout.tsx", layout, "Next.js layout"))
+
+            # Generate main page (dashboard)
+            main_page = await self._generate_main_dashboard(parsed_plan)
+            files.append(GeneratedFile("src/frontend/src/app/page.tsx", main_page, "Main page/dashboard"))
+
+            # Generate UI components
+            for comp in parsed_plan.ui_components[:10]:
+                comp_file = await self._generate_react_component_full(comp, parsed_plan)
+                if comp_file:
+                    files.append(comp_file)
+
+            # Generate API client/hooks
+            api_client = await self._generate_api_client(parsed_plan)
+            files.append(GeneratedFile("src/frontend/src/lib/api.ts", api_client, "API client"))
+
+            # Generate types
+            types_file = await self._generate_frontend_types(parsed_plan)
+            files.append(GeneratedFile("src/frontend/src/types/index.ts", types_file, "TypeScript types"))
+
+            # Generate hooks for data fetching
+            hooks_file = await self._generate_react_hooks(parsed_plan)
+            files.append(GeneratedFile("src/frontend/src/hooks/useApi.ts", hooks_file, "API hooks"))
+
+        return files
+
+    async def _generate_nextjs_layout(self, parsed_plan: ParsedPlan, project_name: str) -> str:
+        """Generate Next.js app layout."""
+        return f'''import type {{ Metadata }} from 'next';
+import {{ Inter }} from 'next/font/google';
+import './globals.css';
+
+const inter = Inter({{ subsets: ['latin'] }});
+
+export const metadata: Metadata = {{
+  title: '{project_name}',
+  description: '{parsed_plan.summary[:100] if parsed_plan.summary else "Generated by MOSS.AO"}',
+}};
+
+export default function RootLayout({{
+  children,
+}}: {{
+  children: React.ReactNode;
+}}) {{
+  return (
+    <html lang="en">
+      <body className={{inter.className}}>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+          {{children}}
+        </div>
+      </body>
+    </html>
+  );
+}}
+'''
+
+    async def _generate_main_dashboard(self, parsed_plan: ParsedPlan) -> str:
+        """Generate main dashboard page with actual functionality."""
+        if not self.router:
+            return self._generate_dashboard_template(parsed_plan)
+
+        features = "\n".join([f"- {f}" for f in parsed_plan.features[:8]])
+        components = "\n".join([f"- {c.name}: {c.description}" for c in parsed_plan.ui_components[:6]])
+
+        prompt = f"""Generate a production-ready Next.js dashboard page.
+
+Project: {parsed_plan.title}
+Summary: {parsed_plan.summary[:300]}
+
+Features to display:
+{features}
+
+Available components:
+{components}
+
+External Data Sources:
+{chr(10).join([f"- {s.name}: {s.purpose}" for s in parsed_plan.external_services[:4]])}
+
+Requirements:
+1. Use TypeScript with proper types
+2. Use Tailwind CSS for styling
+3. Create a professional dashboard layout with:
+   - Header with navigation
+   - Sidebar (if needed)
+   - Main content area with cards/widgets
+   - Data visualization placeholders
+4. Include loading states
+5. Use React hooks for state management
+6. Make it responsive
+7. Dark mode support with Tailwind
+
+This should be a REAL dashboard, not a placeholder.
+
+Output ONLY the TSX code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.4,
+                max_tokens=3500,
+            )
+            return self._clean_code_response(response.content, "tsx")
+        except Exception as e:
+            logger.error(f"Failed to generate dashboard: {e}")
+            return self._generate_dashboard_template(parsed_plan)
+
+    def _generate_dashboard_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback dashboard template."""
+        cards = []
+        for i, feature in enumerate(parsed_plan.features[:4]):
+            cards.append(f'''
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            Feature {i+1}
+          </h3>
+          <p className="text-gray-600 dark:text-gray-300">
+            {feature[:100]}
+          </p>
+        </div>''')
+
+        return f''''use client';
+
+import {{ useState, useEffect }} from 'react';
+
+export default function Dashboard() {{
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any>(null);
+
+  useEffect(() => {{
+    // Fetch initial data
+    const fetchData = async () => {{
+      try {{
+        // TODO: Replace with actual API call
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setData({{ status: 'ready' }});
+      }} catch (error) {{
+        console.error('Failed to fetch data:', error);
+      }} finally {{
+        setLoading(false);
+      }}
+    }};
+
+    fetchData();
+  }}, []);
+
+  if (loading) {{
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }}
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {{/* Header */}}
+      <header className="bg-white dark:bg-gray-800 shadow">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            {parsed_plan.title or 'Dashboard'}
+          </h1>
+          <p className="mt-1 text-gray-600 dark:text-gray-300">
+            {parsed_plan.summary[:100] if parsed_plan.summary else 'Welcome to your dashboard'}
+          </p>
+        </div>
+      </header>
+
+      {{/* Main Content */}}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {"".join(cards) if cards else '''
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+            <p className="text-gray-600 dark:text-gray-300">No features configured</p>
+          </div>'''}
+        </div>
+
+        {{/* Data Section */}}
+        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+            Data Overview
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300">
+            Data visualization and insights will appear here.
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}}
+'''
+
+    async def _generate_react_component_full(
+        self,
+        component: UIComponent,
+        parsed_plan: ParsedPlan,
+    ) -> Optional[GeneratedFile]:
+        """Generate a complete React component with full functionality."""
+        if not self.router:
+            return None
+
+        prompt = f"""Generate a production-ready React/Next.js component.
+
+Component: {component.name}
+Type: {component.type}
+Description: {component.description}
+Features to implement: {component.features}
+
+Project Context: {parsed_plan.summary[:200]}
+Tech Stack: {parsed_plan.tech_stack.frontend}
+
+Requirements:
+1. Use TypeScript with proper interfaces
+2. Use Tailwind CSS for styling
+3. Include loading and error states
+4. Use React hooks appropriately
+5. Make it reusable with proper props
+6. Include accessibility (aria labels, keyboard nav)
+7. Responsive design
+8. Implement ACTUAL functionality, not placeholders
+
+Output ONLY the TSX code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+
+            content = self._clean_code_response(response.content, "tsx")
+
+            # Determine path based on component type
+            if component.type == "page":
+                path = f"src/frontend/src/app/{component.name.lower()}/page.tsx"
+            else:
+                path = f"src/frontend/src/components/{component.name}.tsx"
+
+            return GeneratedFile(path, content, f"React component: {component.name}")
+        except Exception as e:
+            logger.error(f"Failed to generate component {component.name}: {e}")
+            return None
+
+    async def _generate_api_client(self, parsed_plan: ParsedPlan) -> str:
+        """Generate API client for frontend."""
+        endpoints = "\n".join([
+            f"- {e.method} {e.path}: {e.description}"
+            for e in parsed_plan.api_endpoints[:15]
+        ])
+
+        if not self.router:
+            return self._generate_api_client_template(parsed_plan)
+
+        prompt = f"""Generate a TypeScript API client for these endpoints.
+
+Endpoints:
+{endpoints}
+
+Requirements:
+1. Use fetch or axios
+2. Type-safe request and response handling
+3. Error handling with custom error types
+4. Request/response interceptors
+5. Base URL configuration from environment
+6. Include methods for all CRUD operations
+7. Support for authentication headers
+
+Output ONLY the TypeScript code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+            return self._clean_code_response(response.content, "typescript")
+        except Exception as e:
+            logger.error(f"Failed to generate API client: {e}")
+            return self._generate_api_client_template(parsed_plan)
+
+    def _generate_api_client_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback API client template."""
+        return '''/**
+ * API Client - Generated by MOSS.AO
+ */
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+interface ApiResponse<T> {
+  data?: T;
+  error?: string;
+  status: number;
+}
+
+class ApiClient {
+  private baseUrl: string;
+  private headers: Record<string, string>;
+
+  constructor(baseUrl: string = API_BASE_URL) {
+    this.baseUrl = baseUrl;
+    this.headers = {
+      'Content-Type': 'application/json',
+    };
+  }
+
+  setAuthToken(token: string): void {
+    this.headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  private async request<T>(
+    method: string,
+    path: string,
+    body?: unknown
+  ): Promise<ApiResponse<T>> {
+    try {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        method,
+        headers: this.headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        return {
+          error: data.message || 'Request failed',
+          status: response.status,
+        };
+      }
+
+      return { data, status: response.status };
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: 500,
+      };
+    }
+  }
+
+  async get<T>(path: string): Promise<ApiResponse<T>> {
+    return this.request<T>('GET', path);
+  }
+
+  async post<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>('POST', path, body);
+  }
+
+  async put<T>(path: string, body: unknown): Promise<ApiResponse<T>> {
+    return this.request<T>('PUT', path, body);
+  }
+
+  async delete<T>(path: string): Promise<ApiResponse<T>> {
+    return this.request<T>('DELETE', path);
+  }
+}
+
+export const apiClient = new ApiClient();
+export default ApiClient;
+'''
+
+    async def generate_smart_contracts_full(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate smart contracts with actual business logic."""
+        files = []
+
+        for contract in parsed_plan.smart_contracts[:5]:
+            contract_file = await self._generate_solidity_contract(contract, parsed_plan)
+            if contract_file:
+                files.append(contract_file)
+
+        # If no specific contracts defined, generate based on features
+        if not parsed_plan.smart_contracts and parsed_plan.tech_stack.blockchain:
+            main_contract = await self._generate_main_contract(parsed_plan)
+            if main_contract:
+                files.append(main_contract)
+
+        # Generate deployment script
+        deploy_script = self._generate_hardhat_deploy_script(parsed_plan)
+        files.append(GeneratedFile("contracts/scripts/deploy.ts", deploy_script, "Deployment script"))
+
+        # Generate test file
+        test_file = await self._generate_contract_tests(parsed_plan)
+        if test_file:
+            files.append(test_file)
+
+        return files
+
+    async def _generate_solidity_contract(
+        self,
+        contract: SmartContractSpec,
+        parsed_plan: ParsedPlan,
+    ) -> Optional[GeneratedFile]:
+        """Generate a Solidity smart contract."""
+        if not self.router:
+            return None
+
+        functions_desc = "\n".join([
+            f"- {f.get('name', 'unknown')}({f.get('params', '')}): {f.get('description', '')}"
+            for f in contract.functions[:10]
+        ])
+
+        prompt = f"""Generate a production-ready Solidity smart contract.
+
+Contract: {contract.name}
+Purpose: {contract.purpose}
+
+Functions to implement:
+{functions_desc}
+
+Events: {contract.events}
+Storage Variables: {contract.storage}
+
+Project Context: {parsed_plan.summary[:200]}
+
+Requirements:
+1. Solidity ^0.8.20
+2. Use OpenZeppelin contracts where appropriate
+3. Include proper access control (Ownable, AccessControl)
+4. Add NatSpec documentation
+5. Include events for all state changes
+6. Implement proper input validation
+7. Gas optimization where possible
+8. Reentrancy protection if handling ETH
+
+Output ONLY the Solidity code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=3000,
+            )
+
+            content = self._clean_code_response(response.content, "solidity")
+            safe_name = contract.name.replace(" ", "")
+
+            return GeneratedFile(
+                path=f"contracts/contracts/{safe_name}.sol",
+                content=content,
+                description=f"Smart contract: {contract.name}",
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate contract {contract.name}: {e}")
+            return None
+
+    async def _generate_main_contract(self, parsed_plan: ParsedPlan) -> Optional[GeneratedFile]:
+        """Generate main contract based on project features."""
+        if not self.router:
+            return self._generate_contract_template(parsed_plan)
+
+        features = "\n".join([f"- {f}" for f in parsed_plan.features[:8]])
+
+        prompt = f"""Generate a Solidity smart contract that implements these features.
+
+Project: {parsed_plan.title}
+Summary: {parsed_plan.summary[:300]}
+
+Features:
+{features}
+
+Blockchain: {parsed_plan.tech_stack.blockchain}
+
+Requirements:
+1. Solidity ^0.8.20
+2. Use OpenZeppelin for standard functionality
+3. Implement core business logic
+4. Include access control
+5. Add events and modifiers
+6. NatSpec documentation
+7. Gas-efficient code
+
+Generate a REAL contract with actual functionality.
+
+Output ONLY the Solidity code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=3000,
+            )
+
+            content = self._clean_code_response(response.content, "solidity")
+
+            return GeneratedFile(
+                path="contracts/contracts/Main.sol",
+                content=content,
+                description="Main smart contract",
+            )
+        except Exception as e:
+            logger.error(f"Failed to generate main contract: {e}")
+            return GeneratedFile(
+                "contracts/contracts/Main.sol",
+                self._generate_contract_template(parsed_plan),
+                "Main contract template"
+            )
+
+    def _generate_contract_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback contract template."""
+        return '''// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
+
+/**
+ * @title Main Contract
+ * @dev Generated by MOSS.AO
+ */
+contract Main is Ownable, ReentrancyGuard, Pausable {
+    // Events
+    event ActionPerformed(address indexed user, string action, uint256 timestamp);
+
+    // State variables
+    mapping(address => bool) public registeredUsers;
+    uint256 public totalUsers;
+
+    constructor() Ownable(msg.sender) {}
+
+    /**
+     * @dev Register a new user
+     */
+    function register() external whenNotPaused {
+        require(!registeredUsers[msg.sender], "Already registered");
+        registeredUsers[msg.sender] = true;
+        totalUsers++;
+        emit ActionPerformed(msg.sender, "register", block.timestamp);
+    }
+
+    /**
+     * @dev Check if user is registered
+     */
+    function isRegistered(address user) external view returns (bool) {
+        return registeredUsers[user];
+    }
+
+    /**
+     * @dev Pause the contract
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    /**
+     * @dev Unpause the contract
+     */
+    function unpause() external onlyOwner {
+        _unpause();
+    }
+}
+'''
+
+    async def generate_external_services(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate service layer for external API integrations."""
+        files = []
+
+        for service in parsed_plan.external_services[:8]:
+            service_file = await self._generate_service_integration(service, parsed_plan)
+            if service_file:
+                files.append(service_file)
+
+        return files
+
+    async def _generate_service_integration(
+        self,
+        service: ExternalService,
+        parsed_plan: ParsedPlan,
+    ) -> Optional[GeneratedFile]:
+        """Generate service integration code."""
+        if not self.router:
+            return None
+
+        backend = parsed_plan.tech_stack.backend
+        lang = "Python" if backend == "fastapi" else "TypeScript"
+
+        prompt = f"""Generate a {lang} service class for integrating with {service.name}.
+
+Service: {service.name}
+Purpose: {service.purpose}
+Auth Type: {service.auth_type or 'None'}
+
+Requirements:
+1. Clean service class with typed methods
+2. Proper error handling
+3. Rate limiting consideration
+4. Caching where appropriate
+5. Environment variable configuration
+6. Logging
+7. Retry logic for transient failures
+
+Generate REAL integration code, not placeholder stubs.
+
+Output ONLY the {lang} code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+
+            content = self._clean_code_response(response.content, lang.lower())
+            safe_name = service.name.lower().replace(" ", "_").replace("/", "_")
+
+            if backend == "fastapi":
+                path = f"src/backend/app/services/{safe_name}.py"
+            else:
+                path = f"src/backend/src/services/{safe_name}.ts"
+
+            return GeneratedFile(path, content, f"Service: {service.name}")
+        except Exception as e:
+            logger.error(f"Failed to generate service {service.name}: {e}")
+            return None
+
+    async def generate_database_layer(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate database configuration and migrations."""
+        files = []
+
+        backend = parsed_plan.tech_stack.backend
+        database = parsed_plan.tech_stack.database
+
+        if backend == "fastapi":
+            # Alembic migration
+            migration = self._generate_alembic_migration(parsed_plan)
+            files.append(GeneratedFile("src/backend/alembic/versions/001_initial.py", migration, "Initial migration"))
+        else:
+            # Prisma migration or TypeORM
+            if database:
+                migration = await self._generate_prisma_schema(parsed_plan)
+                files.append(GeneratedFile("src/backend/prisma/schema.prisma", migration, "Prisma schema"))
+
+        return files
+
+    async def _generate_prisma_schema(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Prisma schema from entities."""
+        if not self.router or not parsed_plan.entities:
+            return self._generate_prisma_schema_template(parsed_plan)
+
+        entities_desc = "\n".join([
+            f"- {e.name}: {e.description}, Fields: {e.fields}"
+            for e in parsed_plan.entities[:10]
+        ])
+
+        prompt = f"""Generate a Prisma schema for these entities.
+
+{entities_desc}
+
+Database: {parsed_plan.tech_stack.database or 'postgresql'}
+
+Requirements:
+1. Proper model definitions with @id, @default, etc.
+2. Relations with @relation
+3. Indexes where needed
+4. Timestamps (createdAt, updatedAt)
+5. Enums if applicable
+
+Output ONLY the Prisma schema, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.2,
+                max_tokens=2000,
+            )
+            return self._clean_code_response(response.content, "prisma")
+        except Exception as e:
+            logger.error(f"Failed to generate Prisma schema: {e}")
+            return self._generate_prisma_schema_template(parsed_plan)
+
+    def _generate_prisma_schema_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback Prisma schema template."""
+        db_provider = parsed_plan.tech_stack.database or "postgresql"
+        provider_map = {
+            "postgresql": "postgresql",
+            "mysql": "mysql",
+            "sqlite": "sqlite",
+            "mongodb": "mongodb",
+        }
+        provider = provider_map.get(db_provider, "postgresql")
+
+        models = []
+        for entity in parsed_plan.entities[:10]:
+            models.append(f'''
+model {entity.name} {{
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}}
+''')
+
+        return f'''// Prisma Schema - Generated by MOSS.AO
+
+generator client {{
+  provider = "prisma-client-js"
+}}
+
+datasource db {{
+  provider = "{provider}"
+  url      = env("DATABASE_URL")
+}}
+
+{"".join(models) if models else '''
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+'''}
+'''
+
+    async def generate_api_documentation(self, parsed_plan: ParsedPlan) -> str:
+        """Generate comprehensive API documentation."""
+        if not self.router or not parsed_plan.api_endpoints:
+            return self._generate_api_doc_template(parsed_plan)
+
+        endpoints_desc = "\n".join([
+            f"- {e.method} {e.path}: {e.description}"
+            for e in parsed_plan.api_endpoints[:20]
+        ])
+
+        prompt = f"""Generate comprehensive API documentation in Markdown.
+
+API Endpoints:
+{endpoints_desc}
+
+Include:
+1. Overview section
+2. Authentication details
+3. Base URL configuration
+4. Each endpoint with:
+   - Method and path
+   - Description
+   - Request parameters/body
+   - Response format
+   - Example requests/responses
+5. Error codes and handling
+6. Rate limiting info
+
+Output ONLY the markdown content."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="documentation",
+                model=self.TASK_MODELS["readme"],
+                temperature=0.5,
+                max_tokens=3000,
+            )
+            return response.content
+        except Exception as e:
+            logger.error(f"Failed to generate API docs: {e}")
+            return self._generate_api_doc_template(parsed_plan)
+
+    def _generate_api_doc_template(self, parsed_plan: ParsedPlan) -> str:
+        """Fallback API documentation template."""
+        endpoints_md = ""
+        for e in parsed_plan.api_endpoints[:20]:
+            endpoints_md += f"""
+### {e.method} {e.path}
+
+{e.description}
+
+**Request:**
+```json
+// Request body if applicable
+```
+
+**Response:**
+```json
+// Response format
+```
+
+---
+"""
+
+        return f"""# API Documentation
+
+## Overview
+
+API for {parsed_plan.title or 'this project'}.
+
+Base URL: `http://localhost:3001/api`
+
+## Authentication
+
+Include authentication token in headers:
+```
+Authorization: Bearer <token>
+```
+
+## Endpoints
+
+{endpoints_md if endpoints_md else 'No endpoints documented.'}
+
+## Error Handling
+
+| Status Code | Description |
+|-------------|-------------|
+| 200 | Success |
+| 400 | Bad Request |
+| 401 | Unauthorized |
+| 404 | Not Found |
+| 500 | Server Error |
+
+---
+
+*Generated by MOSS.AO*
+"""
+
+    async def generate_docker_config(
+        self,
+        parsed_plan: ParsedPlan,
+        project_name: str,
+    ) -> List[GeneratedFile]:
+        """Generate Docker configuration files."""
+        files = []
+
+        # Dockerfile for backend
+        if parsed_plan.tech_stack.backend:
+            dockerfile = self._generate_dockerfile_backend(parsed_plan)
+            files.append(GeneratedFile("src/backend/Dockerfile", dockerfile, "Backend Dockerfile"))
+
+        # Dockerfile for frontend
+        if parsed_plan.tech_stack.frontend:
+            dockerfile = self._generate_dockerfile_frontend(parsed_plan)
+            files.append(GeneratedFile("src/frontend/Dockerfile", dockerfile, "Frontend Dockerfile"))
+
+        # docker-compose.yml
+        compose = self._generate_docker_compose(parsed_plan, project_name)
+        files.append(GeneratedFile("docker-compose.yml", compose, "Docker Compose"))
+
+        return files
+
+    def _generate_dockerfile_backend(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Dockerfile for backend."""
+        if parsed_plan.tech_stack.backend == "fastapi":
+            return '''FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+'''
+        else:  # Express/Node
+            return '''FROM node:20-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --only=production
+
+COPY . .
+RUN npm run build
+
+EXPOSE 3001
+
+CMD ["node", "dist/index.js"]
+'''
+
+    def _generate_dockerfile_frontend(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Dockerfile for frontend."""
+        return '''FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV production
+
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
+'''
+
+    def _generate_docker_compose(self, parsed_plan: ParsedPlan, project_name: str) -> str:
+        """Generate docker-compose.yml."""
+        services = []
+
+        if parsed_plan.tech_stack.backend:
+            services.append(f'''
+  backend:
+    build:
+      context: ./src/backend
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - DATABASE_URL=${{DATABASE_URL}}
+      - NODE_ENV=production
+    depends_on:
+      - db
+''')
+
+        if parsed_plan.tech_stack.frontend:
+            services.append(f'''
+  frontend:
+    build:
+      context: ./src/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:3001
+    depends_on:
+      - backend
+''')
+
+        db_service = ""
+        if parsed_plan.tech_stack.database == "postgresql":
+            db_service = '''
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=app
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+'''
+        elif parsed_plan.tech_stack.database == "mongodb":
+            db_service = '''
+  db:
+    image: mongo:7
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+'''
+
+        safe_name = project_name.lower().replace(" ", "-").replace("_", "-")
+
+        return f'''version: '3.8'
+
+services:
+{"".join(services)}
+{db_service}
+
+volumes:
+  postgres_data:
+  mongo_data:
+
+networks:
+  default:
+    name: {safe_name}-network
+'''
+
+    def _generate_env_files(self, parsed_plan: ParsedPlan) -> List[GeneratedFile]:
+        """Generate environment configuration files."""
+        files = []
+
+        # Backend .env.example
+        backend_env = []
+        backend_env.append("# Server Configuration")
+        backend_env.append("PORT=3001")
+        backend_env.append("NODE_ENV=development")
+        backend_env.append("")
+
+        if parsed_plan.tech_stack.database:
+            backend_env.append("# Database")
+            if parsed_plan.tech_stack.database == "postgresql":
+                backend_env.append("DATABASE_URL=postgresql://postgres:postgres@localhost:5432/app")
+            elif parsed_plan.tech_stack.database == "mongodb":
+                backend_env.append("DATABASE_URL=mongodb://localhost:27017/app")
+            elif parsed_plan.tech_stack.database == "sqlite":
+                backend_env.append("DATABASE_URL=sqlite:///./app.db")
+            backend_env.append("")
+
+        for service in parsed_plan.external_services:
+            backend_env.append(f"# {service.name}")
+            safe_name = service.name.upper().replace(" ", "_").replace("/", "_")
+            backend_env.append(f"{safe_name}_API_KEY=your-api-key-here")
+            backend_env.append("")
+
+        files.append(GeneratedFile(
+            "src/backend/.env.example",
+            "\n".join(backend_env),
+            "Backend environment template"
+        ))
+
+        # Frontend .env.example
+        frontend_env = [
+            "# API Configuration",
+            "NEXT_PUBLIC_API_URL=http://localhost:3001",
+            "",
+            "# Feature Flags",
+            "NEXT_PUBLIC_ENABLE_ANALYTICS=false",
+        ]
+
+        files.append(GeneratedFile(
+            "src/frontend/.env.example",
+            "\n".join(frontend_env),
+            "Frontend environment template"
+        ))
+
+        return files
+
+    # Helper methods
+
+    def _clean_code_response(self, content: str, language: str) -> str:
+        """Clean LLM response by removing markdown code blocks."""
+        # Remove various markdown code block formats
+        patterns = [
+            (rf'^```{language}\n?', ''),
+            (rf'^```(?:ts|tsx|typescript)\n?', ''),
+            (rf'^```(?:py|python)\n?', ''),
+            (rf'^```(?:sol|solidity)\n?', ''),
+            (r'^```\n?', ''),
+            (r'\n?```$', ''),
+        ]
+
+        for pattern, replacement in patterns:
+            content = re.sub(pattern, replacement, content, flags=re.MULTILINE)
+
+        return content.strip()
+
+    def _generate_fastapi_db_config(self, parsed_plan: ParsedPlan) -> str:
+        """Generate FastAPI database configuration."""
+        return '''"""
+Database Configuration - Generated by MOSS.AO
+"""
+import os
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
+from contextlib import contextmanager
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./app.db")
+
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+)
+
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+def get_db():
+    """Dependency for FastAPI endpoints."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+@contextmanager
+def get_db_session():
+    """Context manager for database sessions."""
+    db = SessionLocal()
+    try:
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+'''
+
+    def _generate_python_requirements(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Python requirements.txt."""
+        requirements = [
+            "fastapi>=0.104.0",
+            "uvicorn[standard]>=0.24.0",
+            "sqlalchemy>=2.0.0",
+            "pydantic>=2.0.0",
+            "python-dotenv>=1.0.0",
+            "alembic>=1.12.0",
+            "httpx>=0.25.0",
+        ]
+
+        if parsed_plan.tech_stack.database == "postgresql":
+            requirements.append("asyncpg>=0.29.0")
+            requirements.append("psycopg2-binary>=2.9.0")
+
+        for service in parsed_plan.external_services:
+            if "twitter" in service.name.lower():
+                requirements.append("tweepy>=4.14.0")
+            if "openai" in service.name.lower():
+                requirements.append("openai>=1.0.0")
+
+        return "\n".join(sorted(set(requirements)))
+
+    def _generate_node_package_json(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Node.js package.json."""
+        deps = {
+            "express": "^4.18.2",
+            "cors": "^2.8.5",
+            "helmet": "^7.1.0",
+            "dotenv": "^16.3.1",
+        }
+
+        if any(s.name.lower().find("websocket") >= 0 for s in parsed_plan.external_services):
+            deps["ws"] = "^8.14.2"
+
+        if parsed_plan.tech_stack.database == "postgresql":
+            deps["@prisma/client"] = "^5.6.0"
+
+        deps_str = ",\n    ".join([f'"{k}": "{v}"' for k, v in sorted(deps.items())])
+
+        return f'''{{
+  "name": "backend",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {{
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  }},
+  "dependencies": {{
+    {deps_str}
+  }},
+  "devDependencies": {{
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.2",
+    "ts-node-dev": "^2.0.0"
+  }}
+}}
+'''
+
+    def _generate_tsconfig(self) -> str:
+        """Generate TypeScript configuration."""
+        return '''{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "lib": ["ES2020"],
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
+'''
+
+    def _generate_hardhat_deploy_script(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Hardhat deployment script."""
+        return '''import { ethers } from "hardhat";
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying contracts with:", deployer.address);
+
+  // Deploy main contract
+  const Contract = await ethers.getContractFactory("Main");
+  const contract = await Contract.deploy();
+  await contract.waitForDeployment();
+
+  console.log("Contract deployed to:", await contract.getAddress());
+
+  // Verify contract on Etherscan (optional)
+  // await run("verify:verify", {
+  //   address: await contract.getAddress(),
+  //   constructorArguments: [],
+  // });
+}
+
+main()
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
+'''
+
+    async def _generate_contract_tests(self, parsed_plan: ParsedPlan) -> Optional[GeneratedFile]:
+        """Generate smart contract tests."""
+        if not self.router:
+            return GeneratedFile(
+                "contracts/test/Main.test.ts",
+                self._generate_contract_test_template(),
+                "Contract tests"
+            )
+
+        prompt = f"""Generate comprehensive Hardhat tests for a smart contract.
+
+Project: {parsed_plan.title}
+Features: {parsed_plan.features[:5]}
+
+Requirements:
+1. Use Hardhat with ethers.js v6
+2. Include deployment tests
+3. Test all public functions
+4. Test access control
+5. Test edge cases and reverts
+6. Use describe/it structure
+
+Output ONLY the TypeScript code, no markdown or explanations."""
+
+        try:
+            response = await self.router.route(
+                prompt=prompt,
+                task_type="code_generation",
+                model=self.TASK_MODELS["code_generation"],
+                temperature=0.3,
+                max_tokens=2500,
+            )
+
+            content = self._clean_code_response(response.content, "typescript")
+            return GeneratedFile("contracts/test/Main.test.ts", content, "Contract tests")
+        except Exception as e:
+            logger.error(f"Failed to generate contract tests: {e}")
+            return GeneratedFile(
+                "contracts/test/Main.test.ts",
+                self._generate_contract_test_template(),
+                "Contract tests"
+            )
+
+    def _generate_contract_test_template(self) -> str:
+        """Fallback contract test template."""
+        return '''import { expect } from "chai";
+import { ethers } from "hardhat";
+import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
+
+describe("Main Contract", function () {
+  async function deployFixture() {
+    const [owner, user1, user2] = await ethers.getSigners();
+    const Contract = await ethers.getContractFactory("Main");
+    const contract = await Contract.deploy();
+
+    return { contract, owner, user1, user2 };
+  }
+
+  describe("Deployment", function () {
+    it("Should set the correct owner", async function () {
+      const { contract, owner } = await loadFixture(deployFixture);
+      expect(await contract.owner()).to.equal(owner.address);
+    });
+  });
+
+  describe("Registration", function () {
+    it("Should allow users to register", async function () {
+      const { contract, user1 } = await loadFixture(deployFixture);
+      await contract.connect(user1).register();
+      expect(await contract.isRegistered(user1.address)).to.be.true;
+    });
+
+    it("Should prevent double registration", async function () {
+      const { contract, user1 } = await loadFixture(deployFixture);
+      await contract.connect(user1).register();
+      await expect(contract.connect(user1).register()).to.be.revertedWith(
+        "Already registered"
+      );
+    });
+  });
+
+  describe("Access Control", function () {
+    it("Should only allow owner to pause", async function () {
+      const { contract, user1 } = await loadFixture(deployFixture);
+      await expect(contract.connect(user1).pause()).to.be.reverted;
+    });
+  });
+});
+'''
+
+    async def _generate_frontend_types(self, parsed_plan: ParsedPlan) -> str:
+        """Generate TypeScript types for frontend."""
+        types = []
+
+        for entity in parsed_plan.entities[:10]:
+            fields = "\n  ".join([
+                f"{f.get('name', 'unknown')}: {self._map_to_ts_type(f.get('type', 'string'))};"
+                for f in entity.fields
+            ]) if entity.fields else "id: string;\n  createdAt: string;\n  updatedAt: string;"
+
+            types.append(f'''
+export interface {entity.name} {{
+  {fields}
+}}
+''')
+
+        return f'''/**
+ * TypeScript Types - Generated by MOSS.AO
+ */
+
+{"".join(types) if types else '''
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+'''}
+
+// API Response types
+export interface ApiResponse<T> {{
+  data?: T;
+  error?: string;
+  status: number;
+}}
+
+export interface PaginatedResponse<T> {{
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}}
+'''
+
+    def _map_to_ts_type(self, db_type: str) -> str:
+        """Map database type to TypeScript type."""
+        type_map = {
+            "string": "string",
+            "text": "string",
+            "varchar": "string",
+            "int": "number",
+            "integer": "number",
+            "float": "number",
+            "decimal": "number",
+            "boolean": "boolean",
+            "bool": "boolean",
+            "datetime": "string",
+            "date": "string",
+            "json": "Record<string, any>",
+            "uuid": "string",
+        }
+        return type_map.get(db_type.lower(), "any")
+
+    async def _generate_typescript_types(self, parsed_plan: ParsedPlan) -> str:
+        """Generate TypeScript types for backend."""
+        return await self._generate_frontend_types(parsed_plan)
+
+    async def _generate_react_hooks(self, parsed_plan: ParsedPlan) -> str:
+        """Generate React hooks for API calls."""
+        return '''/**
+ * API Hooks - Generated by MOSS.AO
+ */
+import { useState, useEffect, useCallback } from 'react';
+import { apiClient } from '../lib/api';
+
+interface UseApiOptions<T> {
+  initialData?: T;
+  onSuccess?: (data: T) => void;
+  onError?: (error: Error) => void;
+}
+
+export function useApi<T>(
+  fetchFn: () => Promise<{ data?: T; error?: string }>,
+  options: UseApiOptions<T> = {}
+) {
+  const [data, setData] = useState<T | undefined>(options.initialData);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  const execute = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetchFn();
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      if (response.data) {
+        setData(response.data);
+        options.onSuccess?.(response.data);
+      }
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      options.onError?.(error);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchFn]);
+
+  useEffect(() => {
+    execute();
+  }, [execute]);
+
+  return { data, loading, error, refetch: execute };
+}
+
+export function useMutation<T, P>(
+  mutationFn: (params: P) => Promise<{ data?: T; error?: string }>,
+  options: UseApiOptions<T> = {}
+) {
+  const [data, setData] = useState<T | undefined>();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const mutate = useCallback(async (params: P) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await mutationFn(params);
+      if (response.error) {
+        throw new Error(response.error);
+      }
+      if (response.data) {
+        setData(response.data);
+        options.onSuccess?.(response.data);
+      }
+      return response;
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Unknown error');
+      setError(error);
+      options.onError?.(error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [mutationFn]);
+
+  return { mutate, data, loading, error };
+}
+'''
+
+    def _generate_alembic_migration(self, parsed_plan: ParsedPlan) -> str:
+        """Generate Alembic migration file."""
+        return '''"""Initial migration
+
+Revision ID: 001
+Create Date: Auto-generated
+
+"""
+from alembic import op
+import sqlalchemy as sa
+
+
+# revision identifiers
+revision = '001'
+down_revision = None
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    # Create tables based on models
+    # This is a placeholder - run alembic revision --autogenerate
+    pass
+
+
+def downgrade() -> None:
+    # Drop tables
+    pass
+'''

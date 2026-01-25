@@ -69,6 +69,76 @@ class ProjectTask:
 
 
 @dataclass
+class DataEntity:
+    """Data model/entity extracted from Plan."""
+    name: str
+    description: str
+    fields: List[Dict[str, str]] = field(default_factory=list)  # [{"name": "id", "type": "string"}]
+    relationships: List[str] = field(default_factory=list)  # ["User has many Posts"]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "description": self.description,
+            "fields": self.fields,
+            "relationships": self.relationships,
+        }
+
+
+@dataclass
+class ExternalService:
+    """External API/service integration extracted from Plan."""
+    name: str  # "Twitter API", "Coingecko"
+    purpose: str  # "Sentiment analysis", "Price data"
+    endpoints: List[str] = field(default_factory=list)  # API endpoints to use
+    auth_type: Optional[str] = None  # "api_key", "oauth2"
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "purpose": self.purpose,
+            "endpoints": self.endpoints,
+            "auth_type": self.auth_type,
+        }
+
+
+@dataclass
+class UIComponent:
+    """UI component/page extracted from Plan."""
+    name: str
+    type: str  # "page", "component", "widget"
+    description: str
+    features: List[str] = field(default_factory=list)  # Features this component implements
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "type": self.type,
+            "description": self.description,
+            "features": self.features,
+        }
+
+
+@dataclass
+class SmartContractSpec:
+    """Smart contract specification extracted from Plan."""
+    name: str
+    purpose: str
+    functions: List[Dict[str, str]] = field(default_factory=list)  # [{"name": "transfer", "params": "...", "desc": "..."}]
+    events: List[str] = field(default_factory=list)
+    storage: List[Dict[str, str]] = field(default_factory=list)  # State variables
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "purpose": self.purpose,
+            "functions": self.functions,
+            "events": self.events,
+            "storage": self.storage,
+        }
+
+
+@dataclass
 class ParsedPlan:
     """Structured data extracted from a Plan document."""
     title: str
@@ -82,6 +152,12 @@ class ParsedPlan:
     risks: List[str] = field(default_factory=list)
     kpis: List[str] = field(default_factory=list)
     raw_content: str = ""
+    # Enhanced fields for high-quality code generation
+    entities: List[DataEntity] = field(default_factory=list)
+    external_services: List[ExternalService] = field(default_factory=list)
+    ui_components: List[UIComponent] = field(default_factory=list)
+    smart_contracts: List[SmartContractSpec] = field(default_factory=list)
+    detailed_features: List[Dict[str, Any]] = field(default_factory=list)  # Rich feature specs
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -95,6 +171,11 @@ class ParsedPlan:
             "duration_estimate": self.duration_estimate,
             "risks": self.risks,
             "kpis": self.kpis,
+            "entities": [e.to_dict() for e in self.entities],
+            "external_services": [s.to_dict() for s in self.external_services],
+            "ui_components": [c.to_dict() for c in self.ui_components],
+            "smart_contracts": [c.to_dict() for c in self.smart_contracts],
+            "detailed_features": self.detailed_features,
         }
 
 
@@ -475,3 +556,312 @@ Return ONLY a JSON object with this structure (no markdown, no explanation):
                 return match.group(0).strip()[:50]
 
         return None
+
+    # External service patterns for detection
+    EXTERNAL_SERVICE_PATTERNS = {
+        "twitter": {
+            "name": "Twitter/X API",
+            "pattern": r"\b(?:twitter|x\.com|tweet|nitter)\b",
+            "purpose": "Social media data, sentiment analysis",
+            "auth_type": "oauth2",
+        },
+        "coingecko": {
+            "name": "Coingecko API",
+            "pattern": r"\b(?:coingecko|coin\s*gecko)\b",
+            "purpose": "Cryptocurrency price and market data",
+            "auth_type": "api_key",
+        },
+        "etherscan": {
+            "name": "Etherscan API",
+            "pattern": r"\b(?:etherscan)\b",
+            "purpose": "Ethereum blockchain data",
+            "auth_type": "api_key",
+        },
+        "alchemy": {
+            "name": "Alchemy API",
+            "pattern": r"\b(?:alchemy)\b",
+            "purpose": "Blockchain RPC and enhanced APIs",
+            "auth_type": "api_key",
+        },
+        "infura": {
+            "name": "Infura API",
+            "pattern": r"\b(?:infura)\b",
+            "purpose": "Ethereum node access",
+            "auth_type": "api_key",
+        },
+        "openai": {
+            "name": "OpenAI API",
+            "pattern": r"\b(?:openai|gpt|chatgpt)\b",
+            "purpose": "AI/ML text generation and analysis",
+            "auth_type": "api_key",
+        },
+        "dune": {
+            "name": "Dune Analytics",
+            "pattern": r"\b(?:dune\s*analytics|dune)\b",
+            "purpose": "On-chain analytics and queries",
+            "auth_type": "api_key",
+        },
+        "nansen": {
+            "name": "Nansen",
+            "pattern": r"\b(?:nansen)\b",
+            "purpose": "On-chain wallet analytics",
+            "auth_type": "api_key",
+        },
+        "defillama": {
+            "name": "DefiLlama API",
+            "pattern": r"\b(?:defillama|defi\s*llama)\b",
+            "purpose": "DeFi TVL and protocol data",
+            "auth_type": None,
+        },
+        "websocket": {
+            "name": "WebSocket Server",
+            "pattern": r"\b(?:websocket|ws://|wss://|실시간|real-?time)\b",
+            "purpose": "Real-time bidirectional communication",
+            "auth_type": None,
+        },
+    }
+
+    def _extract_external_services(self, content: str) -> List[ExternalService]:
+        """Extract external service integrations from content."""
+        services = []
+        content_lower = content.lower()
+
+        for key, config in self.EXTERNAL_SERVICE_PATTERNS.items():
+            if re.search(config["pattern"], content_lower, re.IGNORECASE):
+                services.append(ExternalService(
+                    name=config["name"],
+                    purpose=config["purpose"],
+                    endpoints=[],
+                    auth_type=config["auth_type"],
+                ))
+
+        return services
+
+    def _extract_entities_basic(self, content: str) -> List[DataEntity]:
+        """Basic entity extraction using patterns."""
+        entities = []
+
+        # Common entity patterns
+        entity_patterns = [
+            (r"\b(?:User|사용자|Member)\b", "User", "User account and profile"),
+            (r"\b(?:Wallet|지갑|Address)\b", "Wallet", "Blockchain wallet"),
+            (r"\b(?:Transaction|트랜잭션|거래)\b", "Transaction", "Transaction record"),
+            (r"\b(?:Alert|알림|Notification)\b", "Alert", "Notification/alert"),
+            (r"\b(?:Sentiment|감성|Opinion)\b", "Sentiment", "Sentiment analysis result"),
+            (r"\b(?:Token|토큰|Coin)\b", "Token", "Cryptocurrency token"),
+            (r"\b(?:Price|가격|Market)\b", "MarketData", "Market price data"),
+            (r"\b(?:Portfolio|포트폴리오)\b", "Portfolio", "User portfolio"),
+            (r"\b(?:Setting|설정|Config)\b", "Setting", "User settings"),
+        ]
+
+        seen = set()
+        for pattern, name, desc in entity_patterns:
+            if re.search(pattern, content, re.IGNORECASE) and name not in seen:
+                seen.add(name)
+                entities.append(DataEntity(
+                    name=name,
+                    description=desc,
+                    fields=[],
+                    relationships=[],
+                ))
+
+        return entities
+
+    def _extract_ui_components_basic(self, content: str) -> List[UIComponent]:
+        """Basic UI component extraction."""
+        components = []
+
+        # Common UI patterns
+        ui_patterns = [
+            (r"\b(?:Dashboard|대시보드)\b", "Dashboard", "page", "Main dashboard view"),
+            (r"\b(?:Chart|차트|Graph)\b", "Chart", "component", "Data visualization chart"),
+            (r"\b(?:Alert|알림)\s*(?:List|목록)?\b", "AlertList", "component", "Alert/notification list"),
+            (r"\b(?:Settings?|설정)\s*(?:Page|페이지)?\b", "Settings", "page", "Settings page"),
+            (r"\b(?:Profile|프로필)\b", "Profile", "page", "User profile page"),
+            (r"\b(?:Login|로그인|Auth)\b", "Auth", "page", "Authentication page"),
+            (r"\b(?:Search|검색)\b", "Search", "component", "Search functionality"),
+            (r"\b(?:Table|테이블|List|목록)\b", "DataTable", "component", "Data table/list view"),
+            (r"\b(?:Modal|모달|Dialog)\b", "Modal", "component", "Modal dialog"),
+            (r"\b(?:Sidebar|사이드바|Nav)\b", "Sidebar", "component", "Navigation sidebar"),
+        ]
+
+        seen = set()
+        for pattern, name, comp_type, desc in ui_patterns:
+            if re.search(pattern, content, re.IGNORECASE) and name not in seen:
+                seen.add(name)
+                components.append(UIComponent(
+                    name=name,
+                    type=comp_type,
+                    description=desc,
+                    features=[],
+                ))
+
+        return components
+
+    async def parse_deep_with_llm(self, content: str, title: str = "") -> ParsedPlan:
+        """
+        Deep parsing using LLM for comprehensive extraction.
+
+        This extracts entities, services, UI components, and detailed features
+        for high-quality code generation.
+
+        Args:
+            content: Plan document content
+            title: Plan title
+
+        Returns:
+            ParsedPlan with comprehensive extracted data
+        """
+        # Start with basic parsing
+        base_parsed = self.parse(content, title)
+
+        # Add basic extractions
+        base_parsed.external_services = self._extract_external_services(content)
+        base_parsed.entities = self._extract_entities_basic(content)
+        base_parsed.ui_components = self._extract_ui_components_basic(content)
+
+        if not self.router:
+            logger.warning("No LLM router, using basic extraction only")
+            return base_parsed
+
+        try:
+            # Deep extraction with LLM
+            deep_prompt = f"""Analyze this project plan and extract detailed specifications for code generation.
+
+Plan Content:
+{content[:4000]}
+
+Return ONLY a JSON object with this exact structure (no markdown, no explanation):
+{{
+    "entities": [
+        {{
+            "name": "EntityName",
+            "description": "What this entity represents",
+            "fields": [
+                {{"name": "id", "type": "string", "description": "Primary key"}},
+                {{"name": "createdAt", "type": "datetime", "description": "Creation timestamp"}}
+            ],
+            "relationships": ["Entity has many OtherEntity"]
+        }}
+    ],
+    "api_endpoints": [
+        {{
+            "method": "GET",
+            "path": "/api/resource",
+            "description": "What this endpoint does",
+            "request_body": "{{ field: type }}",
+            "response_type": "{{ field: type }}"
+        }}
+    ],
+    "ui_components": [
+        {{
+            "name": "ComponentName",
+            "type": "page|component|widget",
+            "description": "What this component does",
+            "features": ["feature1", "feature2"]
+        }}
+    ],
+    "smart_contracts": [
+        {{
+            "name": "ContractName",
+            "purpose": "What this contract does",
+            "functions": [
+                {{"name": "functionName", "params": "param1: type", "description": "What it does"}}
+            ],
+            "events": ["EventName(indexed param1, param2)"],
+            "storage": [{{"name": "varName", "type": "mapping(address => uint256)"}}]
+        }}
+    ],
+    "detailed_features": [
+        {{
+            "name": "Feature Name",
+            "description": "Detailed description",
+            "components_needed": ["Component1", "Component2"],
+            "apis_needed": ["/api/endpoint1"],
+            "priority": "high|medium|low"
+        }}
+    ]
+}}
+
+Extract ALL relevant entities, endpoints, components, and features from the plan.
+Be comprehensive but realistic based on what's actually described in the plan."""
+
+            response = await self.router.route(
+                prompt=deep_prompt,
+                task_type="parsing",
+                model="qwen2.5:32b",  # Use larger model for complex extraction
+                temperature=0.2,
+                max_tokens=4000,
+            )
+
+            # Parse LLM response
+            try:
+                json_match = re.search(r'\{[\s\S]*\}', response.content)
+                if json_match:
+                    data = json.loads(json_match.group())
+
+                    # Update entities
+                    if data.get("entities"):
+                        base_parsed.entities = [
+                            DataEntity(
+                                name=e.get("name", "Unknown"),
+                                description=e.get("description", ""),
+                                fields=e.get("fields", []),
+                                relationships=e.get("relationships", []),
+                            )
+                            for e in data["entities"]
+                        ]
+
+                    # Update API endpoints
+                    if data.get("api_endpoints"):
+                        base_parsed.api_endpoints = [
+                            APIEndpoint(
+                                method=e.get("method", "GET"),
+                                path=e.get("path", "/"),
+                                description=e.get("description", ""),
+                                request_body=e.get("request_body"),
+                                response_type=e.get("response_type"),
+                            )
+                            for e in data["api_endpoints"]
+                        ]
+
+                    # Update UI components
+                    if data.get("ui_components"):
+                        base_parsed.ui_components = [
+                            UIComponent(
+                                name=c.get("name", "Component"),
+                                type=c.get("type", "component"),
+                                description=c.get("description", ""),
+                                features=c.get("features", []),
+                            )
+                            for c in data["ui_components"]
+                        ]
+
+                    # Update smart contracts
+                    if data.get("smart_contracts"):
+                        base_parsed.smart_contracts = [
+                            SmartContractSpec(
+                                name=c.get("name", "Contract"),
+                                purpose=c.get("purpose", ""),
+                                functions=c.get("functions", []),
+                                events=c.get("events", []),
+                                storage=c.get("storage", []),
+                            )
+                            for c in data["smart_contracts"]
+                        ]
+
+                    # Update detailed features
+                    if data.get("detailed_features"):
+                        base_parsed.detailed_features = data["detailed_features"]
+
+                    logger.info(f"Deep parsing extracted: {len(base_parsed.entities)} entities, "
+                               f"{len(base_parsed.api_endpoints)} endpoints, "
+                               f"{len(base_parsed.ui_components)} components")
+
+            except json.JSONDecodeError as e:
+                logger.warning(f"Failed to parse LLM deep extraction response: {e}")
+
+        except Exception as e:
+            logger.error(f"Deep LLM parsing failed: {e}")
+
+        return base_parsed

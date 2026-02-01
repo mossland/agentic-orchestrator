@@ -21,6 +21,7 @@ from .discord import DiscordAdapter
 from .lens import LensAdapter
 from .farcaster import FarcasterAdapter
 from .coingecko import CoingeckoAdapter
+from .threads import ThreadsAdapter
 
 __all__ = [
     # Base
@@ -40,4 +41,6 @@ __all__ = [
     "LensAdapter",
     "FarcasterAdapter",
     "CoingeckoAdapter",
+    # New Adapters (v0.6.6)
+    "ThreadsAdapter",
 ]

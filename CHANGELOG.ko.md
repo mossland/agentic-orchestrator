@@ -7,6 +7,14 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.6.6] - 2026-02-01
+
+### 추가됨
+- **Threads 어댑터**: Meta Threads 시그널 수집 어댑터 (`threads.py`) — 공개 프로필 페이지에서 내장 JSON을 추출하여 추적 계정(`@choi.openai`, `@unclejobs.ai`, `@feelfree_ai`)의 게시물 수집 (httpx 사용, 외부 라이브러리 불필요)
+- Threads 어댑터를 aggregator, API `/adapters` 엔드포인트, 어댑터 exports에 등록
+
+---
+
 ## [0.6.5] - 2026-02-01
 
 ### 수정됨

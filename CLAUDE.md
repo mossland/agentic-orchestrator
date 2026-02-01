@@ -11,12 +11,12 @@
 
 ## 핵심 철학
 
-### 1. 다양한 시그널 소스 (10개 어댑터)
+### 1. 다양한 시그널 소스 (11개 어댑터)
 
 **목적:** 최신 트렌드를 빠르게 파악 → 신선한 아이디어의 기반 마련
 
 ```
-RSS, GitHub, OnChain, Social, News, Twitter, Discord, Lens, Farcaster, Coingecko
+RSS, GitHub, OnChain, Social, News, Twitter, Discord, Lens, Farcaster, Coingecko, Threads
                                     ↓
                         최신 트렌드 실시간 수집
                                     ↓
@@ -71,7 +71,7 @@ agentic-orchestrator/
 │   │   └── migrate_bilingual.py # 기존 데이터 번역 마이그레이션
 │   └── signals/                 # 신호 수집기
 │       ├── aggregator.py        # 신호 수집 조율
-│       └── adapters/            # 시그널 어댑터 (10개)
+│       └── adapters/            # 시그널 어댑터 (11개)
 │           ├── rss.py           # RSS 피드 (28개 소스)
 │           ├── github_events.py # GitHub Trending/Releases
 │           ├── onchain.py       # DefiLlama, Whale Alert, DEX
@@ -81,7 +81,8 @@ agentic-orchestrator/
 │           ├── discord.py       # Discord 서버 공지
 │           ├── lens.py          # Lens Protocol (GraphQL)
 │           ├── farcaster.py     # Farcaster (Neynar API)
-│           └── coingecko.py     # Coingecko (시장 데이터, 트렌딩)
+│           ├── coingecko.py     # Coingecko (시장 데이터, 트렌딩)
+│           └── threads.py      # Meta Threads (공개 프로필 스크래핑)
 ├── website/                     # Next.js 프론트엔드 (포트 3000)
 │   ├── src/app/                 # App Router 페이지
 │   │   ├── page.tsx             # 대시보드 (/)

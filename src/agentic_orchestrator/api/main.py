@@ -742,7 +742,7 @@ async def get_adapters():
     from ..adapters import (
         RSSAdapter, GitHubEventsAdapter, OnChainAdapter,
         SocialMediaAdapter, NewsAPIAdapter, TwitterAdapter,
-        DiscordAdapter, LensAdapter, FarcasterAdapter
+        DiscordAdapter, LensAdapter, FarcasterAdapter, ThreadsAdapter
     )
     import asyncio
 
@@ -803,6 +803,12 @@ async def get_adapters():
             "category": "web3",
             "description": "Farcaster/Warpcast (10개 유저, 10개 채널)",
             "description_en": "Farcaster/Warpcast (10 users, 10 channels)",
+        },
+        {
+            "class": ThreadsAdapter,
+            "category": "social",
+            "description": "Meta Threads 게시물 수집 (3개 계정)",
+            "description_en": "Meta Threads posts (3 accounts)",
         },
     ]
 

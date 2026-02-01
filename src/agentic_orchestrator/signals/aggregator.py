@@ -19,6 +19,7 @@ from ..adapters.discord import DiscordAdapter
 from ..adapters.lens import LensAdapter
 from ..adapters.farcaster import FarcasterAdapter
 from ..adapters.coingecko import CoingeckoAdapter
+from ..adapters.threads import ThreadsAdapter
 from ..db.connection import db
 from ..db.models import Signal
 from ..db.repositories import SignalRepository
@@ -63,6 +64,8 @@ class SignalAggregator:
             FarcasterAdapter(),  # Farcaster/Warpcast
             # Market data adapter (new in v0.5.0)
             CoingeckoAdapter(),  # Market trends, gainers/losers, trending coins
+            # Social media (new in v0.6.6)
+            ThreadsAdapter(),  # Meta Threads posts
         ]
 
     async def collect_all(

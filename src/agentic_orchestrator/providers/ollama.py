@@ -15,9 +15,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Dict, Any, List, AsyncIterator
 
+import logging
+
 import httpx
 
 from .base import ProviderError
+
+logger = logging.getLogger(__name__)
 
 
 def load_throttle_config() -> Dict[str, Any]:
@@ -136,33 +140,45 @@ class OllamaProvider:
         self._throttle_enabled = os.getenv("OLLAMA_THROTTLE", "true").lower() == "true"
 
     async def _wait_for_throttle(self) -> None:
-        """Wait for throttling conditions to be met."""
+        """Wait for throttling conditions to be met.
+
+        Releases the lock during sleep to avoid blocking other coroutines.
+        """
         if not self._throttle_enabled:
             return
 
         throttle_config = self.config.throttle
         state = self._throttle_state
 
+        # Phase 1: Check cooling period (release lock during sleep)
+        cooling_wait = 0.0
         async with state._lock:
             now = time.time()
-
-            # Check if we're in cooling period
             if state.is_cooling and now < state.cooling_until:
-                wait_time = state.cooling_until - now
-                print(f"[Ollama] Cooling period: waiting {wait_time:.1f}s for GPU to cool down...")
-                await asyncio.sleep(wait_time)
+                cooling_wait = state.cooling_until - now
+
+        if cooling_wait > 0:
+            logger.info(f"[Ollama] Cooling period: waiting {cooling_wait:.1f}s for GPU to cool down...")
+            await asyncio.sleep(cooling_wait)
+            async with state._lock:
                 state.is_cooling = False
                 state.request_count = 0
 
-            # Enforce minimum interval between requests
+        # Phase 2: Enforce minimum interval (release lock during sleep)
+        interval_wait = 0.0
+        async with state._lock:
+            now = time.time()
             min_interval = throttle_config.get("min_request_interval", 5)
             elapsed = now - state.last_request_time
             if elapsed < min_interval and state.last_request_time > 0:
-                wait_time = min_interval - elapsed
-                print(f"[Ollama] Throttling: waiting {wait_time:.1f}s before next request...")
-                await asyncio.sleep(wait_time)
+                interval_wait = min_interval - elapsed
 
-            # Update state
+        if interval_wait > 0:
+            logger.info(f"[Ollama] Throttling: waiting {interval_wait:.1f}s before next request...")
+            await asyncio.sleep(interval_wait)
+
+        # Phase 3: Update state (hold lock briefly)
+        async with state._lock:
             state.last_request_time = time.time()
             state.request_count += 1
 
@@ -172,7 +188,7 @@ class OllamaProvider:
                 cooling_seconds = throttle_config.get("cooling_period_seconds", 30)
                 state.is_cooling = True
                 state.cooling_until = time.time() + cooling_seconds
-                print(f"[Ollama] Scheduling cooling period after {requests_before_cooling} requests ({cooling_seconds}s)")
+                logger.info(f"[Ollama] Scheduling cooling period after {requests_before_cooling} requests ({cooling_seconds}s)")
 
     @property
     def name(self) -> str:
@@ -378,7 +394,7 @@ class OllamaProvider:
                 return self._available_models
 
         except Exception as e:
-            print(f"Error getting Ollama models: {e}")
+            logger.error(f"Error getting Ollama models: {e}")
             return []
 
     async def pull_model(self, model: str) -> bool:
@@ -392,7 +408,7 @@ class OllamaProvider:
                 return response.status_code == 200
 
         except Exception as e:
-            print(f"Error pulling model {model}: {e}")
+            logger.error(f"Error pulling model {model}: {e}")
             return False
 
     async def health_check(self) -> Dict[str, Any]:

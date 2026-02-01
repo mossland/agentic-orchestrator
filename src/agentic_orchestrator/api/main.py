@@ -195,23 +195,26 @@ async def get_signals(
     """Get recent signals with filtering and pagination."""
     repo = SignalRepository(session)
 
-    # Get signals with filters
+    # Get signals with SQL-level pagination
     signals = repo.get_recent(
         hours=hours,
-        limit=limit + offset,  # Get extra for offset handling
+        limit=limit,
+        offset=offset,
         source=source,
         category=category,
         min_score=min_score,
     )
 
-    # Apply offset manually (simple pagination)
-    paginated = signals[offset:offset + limit]
-
     # Get total count for pagination info
-    total = len(signals)
+    total = repo.count_recent_filtered(
+        hours=hours,
+        source=source,
+        category=category,
+        min_score=min_score,
+    )
 
     return {
-        "signals": [s.to_dict() for s in paginated],
+        "signals": [s.to_dict() for s in signals],
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -229,24 +232,25 @@ async def get_debates(
     """Get recent debate sessions with filtering."""
     repo = DebateRepository(session)
 
-    # Get sessions based on filters
+    # Get sessions with SQL-level pagination
+    sessions = repo.get_all_sessions(
+        limit=limit,
+        offset=offset,
+        status=status if status != "active" else None,
+        phase=phase,
+    )
+
     if status == "active":
         sessions = repo.get_active_sessions()
-    elif phase:
-        sessions = repo.get_sessions_by_phase(phase)
+        total = len(sessions)
+        sessions = sessions[offset:offset + limit]
     else:
-        # Get all sessions - query directly for all sessions ordered by date
-        from ..db.models import DebateSession
-        from sqlalchemy import desc
-        sessions = (
-            session.query(DebateSession)
-            .order_by(desc(DebateSession.started_at))
-            .all()
+        total = repo.count_sessions(
+            status=status if status != "active" else None,
+            phase=phase,
         )
 
-    # Apply pagination
-    total = len(sessions)
-    paginated = sessions[offset:offset + limit]
+    paginated = sessions
 
     # Build response with message counts
     debates = []
@@ -273,7 +277,7 @@ async def get_debate_detail(
 
     debate = repo.get_session_by_id(session_id)
     if not debate:
-        return {"error": "Debate session not found", "session_id": session_id}
+        raise HTTPException(status_code=404, detail=f"Debate session not found: {session_id}")
 
     messages = repo.get_session_messages(session_id)
 
@@ -363,7 +367,7 @@ async def get_idea_detail(
 
     idea = idea_repo.get_by_id(idea_id)
     if not idea:
-        return {"error": "Idea not found", "idea_id": idea_id}
+        raise HTTPException(status_code=404, detail=f"Idea not found: {idea_id}")
 
     # Get source debate session (via FK or metadata for backward compatibility)
     source_debate_id = idea.debate_session_id
@@ -418,7 +422,7 @@ async def get_idea_lineage(
 
     idea = idea_repo.get_by_id(idea_id)
     if not idea:
-        return {"error": "Idea not found", "idea_id": idea_id}
+        raise HTTPException(status_code=404, detail=f"Idea not found: {idea_id}")
 
     # Get related signals based on idea metadata or source
     signals = []
@@ -561,13 +565,14 @@ async def get_plan_detail(
 
     plan = repo.get_by_id(plan_id)
     if not plan:
-        return {"error": "Plan not found", "plan_id": plan_id}
+        raise HTTPException(status_code=404, detail=f"Plan not found: {plan_id}")
 
     # Include full plan content
     return {
         "id": plan.id,
         "idea_id": plan.idea_id,
         "title": plan.title,
+        "title_ko": getattr(plan, 'title_ko', None),
         "version": plan.version,
         "status": plan.status,
         "prd_content": plan.prd_content,
@@ -576,6 +581,7 @@ async def get_plan_detail(
         "business_model_content": plan.business_model_content,
         "project_plan_content": plan.project_plan_content,
         "final_plan": plan.final_plan,
+        "final_plan_ko": getattr(plan, 'final_plan_ko', None),
         "github_issue_url": plan.github_issue_url,
         "created_at": plan.created_at.isoformat() if plan.created_at else None,
         "updated_at": plan.updated_at.isoformat() if plan.updated_at else None,
@@ -1164,7 +1170,30 @@ async def root():
 # =============================================================================
 
 # Background task storage for project generation jobs
-_project_jobs: Dict[str, Dict[str, Any]] = {}
+# Persisted to disk to survive server restarts
+import json as _json
+from pathlib import Path as _Path
+
+_JOBS_FILE = _Path(__file__).parent.parent.parent.parent / "data" / "project_jobs.json"
+
+def _load_jobs() -> Dict[str, Dict[str, Any]]:
+    """Load jobs from disk."""
+    try:
+        if _JOBS_FILE.exists():
+            return _json.loads(_JOBS_FILE.read_text())
+    except Exception:
+        pass
+    return {}
+
+def _save_jobs():
+    """Persist jobs to disk."""
+    try:
+        _JOBS_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _JOBS_FILE.write_text(_json.dumps(_project_jobs, indent=2, default=str))
+    except Exception:
+        pass
+
+_project_jobs: Dict[str, Dict[str, Any]] = _load_jobs()
 
 
 class GenerateProjectRequest(BaseModel):
@@ -1192,6 +1221,7 @@ async def _generate_project_task(
 
     _project_jobs[job_id]["status"] = "in_progress"
     _project_jobs[job_id]["started_at"] = datetime.utcnow().isoformat()
+    _save_jobs()
 
     try:
         # Initialize components
@@ -1217,11 +1247,13 @@ async def _generate_project_task(
         _project_jobs[job_id]["status"] = "completed" if result.success else "failed"
         _project_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
         _project_jobs[job_id]["result"] = result.to_dict()
+        _save_jobs()
 
     except Exception as e:
         _project_jobs[job_id]["status"] = "failed"
         _project_jobs[job_id]["completed_at"] = datetime.utcnow().isoformat()
         _project_jobs[job_id]["error"] = str(e)
+        _save_jobs()
 
 
 @app.post("/plans/{plan_id}/generate-project", response_model=GenerateProjectResponse)

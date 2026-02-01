@@ -310,7 +310,10 @@ class ProjectScaffold:
         tech_stack: Dict[str, Any],
         status: str = "generating",
     ) -> str:
-        """Create project record in database."""
+        """Create project record in database.
+
+        Checks for existing projects with same plan_id to prevent duplicates.
+        """
         import uuid
         project_id = str(uuid.uuid4())[:8]
 
@@ -319,6 +322,16 @@ class ProjectScaffold:
 
         try:
             from ..db.models import Project
+
+            # Check for existing project with same plan_id (prevent duplicates)
+            existing = self.db_session.query(Project).filter(
+                Project.plan_id == plan_id,
+                Project.status.in_(["generating", "ready"]),
+            ).first()
+            if existing:
+                logger.warning(f"Project already exists for plan {plan_id}: {existing.id} (status: {existing.status})")
+                return existing.id
+
             project = Project(
                 id=project_id,
                 plan_id=plan_id,

@@ -166,6 +166,9 @@ class MultiStageDebate:
         self.total_tokens = 0
         self.total_cost = 0.0
 
+    # Maximum debate duration in seconds (45 minutes)
+    DEBATE_TIMEOUT_SECONDS = 45 * 60
+
     async def run_debate(
         self,
         topic: str,
@@ -180,11 +183,32 @@ class MultiStageDebate:
 
         Returns:
             Complete debate result
+
+        Raises:
+            asyncio.TimeoutError: If debate exceeds DEBATE_TIMEOUT_SECONDS
         """
         start_time = datetime.utcnow()
         logger.info(f"Starting multi-stage debate: {topic}")
         logger.info(f"Session ID: {self.session_id}")
+        logger.info(f"Timeout: {self.DEBATE_TIMEOUT_SECONDS}s")
 
+        try:
+            return await asyncio.wait_for(
+                self._run_debate_phases(topic, context, start_time),
+                timeout=self.DEBATE_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            total_duration = (datetime.utcnow() - start_time).total_seconds()
+            logger.error(f"Debate timed out after {total_duration:.1f}s")
+            raise
+
+    async def _run_debate_phases(
+        self,
+        topic: str,
+        context: str,
+        start_time: datetime,
+    ) -> MultiStageDebateResult:
+        """Run all debate phases (called within timeout wrapper)."""
         # Phase 1: Divergence
         logger.info("=" * 50)
         logger.info("PHASE 1: DIVERGENCE")
@@ -1387,9 +1411,9 @@ At the end, specify [Approved], [Needs Revision], or [Rejected].
                     except ValueError:
                         continue
 
-            # Default score if not found
+            # Skip scoring if no score found (avoid polluting with arbitrary defaults)
             if idea_id not in scores:
-                scores[idea_id] = 5.0  # Neutral score
+                logger.warning(f"Could not extract score for idea {idea_id}, skipping")
 
         return scores
 

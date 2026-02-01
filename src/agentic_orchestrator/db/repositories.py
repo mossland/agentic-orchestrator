@@ -52,15 +52,14 @@ class SignalRepository(BaseRepository):
         """Get signal by ID."""
         return self.session.query(Signal).filter(Signal.id == signal_id).first()
 
-    def get_recent(
+    def _build_recent_query(
         self,
         hours: int = 24,
-        limit: int = 100,
         source: Optional[str] = None,
         category: Optional[str] = None,
-        min_score: float = 0.0
-    ) -> List[Signal]:
-        """Get recent signals with optional filters."""
+        min_score: float = 0.0,
+    ):
+        """Build base query for recent signals with filters."""
         since = datetime.utcnow() - timedelta(hours=hours)
 
         query = self.session.query(Signal).filter(
@@ -73,7 +72,42 @@ class SignalRepository(BaseRepository):
         if category:
             query = query.filter(Signal.category == category)
 
-        return query.order_by(desc(Signal.score)).limit(limit).all()
+        return query
+
+    def get_recent(
+        self,
+        hours: int = 24,
+        limit: int = 100,
+        offset: int = 0,
+        source: Optional[str] = None,
+        category: Optional[str] = None,
+        min_score: float = 0.0
+    ) -> List[Signal]:
+        """Get recent signals with optional filters and SQL-level pagination."""
+        query = self._build_recent_query(hours, source, category, min_score)
+        return query.order_by(desc(Signal.score)).offset(offset).limit(limit).all()
+
+    def count_recent_filtered(
+        self,
+        hours: int = 24,
+        source: Optional[str] = None,
+        category: Optional[str] = None,
+        min_score: float = 0.0,
+    ) -> int:
+        """Count recent signals matching filters."""
+        since = datetime.utcnow() - timedelta(hours=hours)
+
+        query = self.session.query(func.count(Signal.id)).filter(
+            Signal.collected_at >= since,
+            Signal.score >= min_score
+        )
+
+        if source:
+            query = query.filter(Signal.source == source)
+        if category:
+            query = query.filter(Signal.category == category)
+
+        return query.scalar() or 0
 
     def get_by_source(self, source: str, limit: int = 50) -> List[Signal]:
         """Get signals by source."""

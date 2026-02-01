@@ -97,7 +97,7 @@ class SignalAggregator:
                 if result.success:
                     all_signals.extend(result.signals)
             elif isinstance(result, Exception):
-                print(f"Adapter error: {result}")
+                logger.error(f"Adapter error: {result}")
 
         # Deduplicate
         if deduplicate:

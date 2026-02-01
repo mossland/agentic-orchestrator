@@ -7,6 +7,28 @@ All notable changes to the Mossland Agentic Orchestrator will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.5] - 2026-02-01
+
+### Fixed
+
+#### Backend Stability & Performance (System Audit)
+- **Ollama Throttle Lock Bottleneck (H3)**: Lock is now released during `asyncio.sleep()` in `_wait_for_throttle`, preventing all coroutines from serializing when multiple agents request LLM simultaneously
+- **Debate Timeout (H4)**: Added 45-minute overall timeout (`DEBATE_TIMEOUT_SECONDS`) to prevent infinite-running debates in production mode
+- **API Error Response Consistency (H5)**: Replaced dict-based error returns (`{"error": "..."}`) with proper `HTTPException(status_code=404)` for debate detail, idea detail, idea lineage, and plan detail endpoints
+- **Duplicate Project Generation (M1)**: Added duplicate check in `_create_project_record()` - returns existing project ID if one already exists with "generating" or "ready" status for the same plan
+- **Job State Persistence (M2)**: Project generation job statuses now persist to `data/project_jobs.json` and survive server restarts
+- **Plan Detail Missing `title_ko` (M3)**: Added `title_ko` and `final_plan_ko` fields to `/plans/{id}` response
+- **Signal Pagination (M5)**: Replaced Python-level slicing with SQL `LIMIT/OFFSET` in `SignalRepository.get_recent()` and added `count_recent_filtered()` for accurate totals
+- **Debate Pagination**: Debates endpoint now uses SQL-level pagination via `get_all_sessions()`
+- **LLM Fallback Infinite Loop (L2)**: Fallback now wrapped in try/except - raises immediately if fallback also fails
+- **Score Default 5.0 (L3)**: Removed arbitrary 5.0 default score when extraction fails; now logs warning and skips instead
+
+### Changed
+- **Config test_mode Unified (H2)**: Set `debate.test_mode: false` to match `throttling.test_mode: false` (production mode)
+- **print → logger (L1)**: Replaced all `print()` calls with `logger.error()`/`logger.info()` in `ollama.py`, `router.py`, `aggregator.py`
+
+---
+
 ## [0.6.4] - 2026-01-25
 
 ### Added

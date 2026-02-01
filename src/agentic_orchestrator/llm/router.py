@@ -2,6 +2,7 @@
 Hybrid LLM router for intelligent model selection.
 """
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional, Dict, Any, List
@@ -11,6 +12,8 @@ from ..providers.claude import ClaudeProvider
 from ..providers.openai import OpenAIProvider
 from .budget import BudgetController
 from .hierarchy import LLMHierarchy, ModelTier
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -167,20 +170,24 @@ class HybridLLMRouter:
                 provider_name = "ollama"
 
         except Exception as e:
-            # On error, try fallback
-            print(f"Error with {selected_model}: {e}")
+            # On error, try fallback (once only to prevent infinite loops)
+            logger.error(f"Error with {selected_model}: {e}")
             fallback = self.hierarchy.get_fallback_model(selected_model)
 
-            if fallback != selected_model:
-                response = await self._call_ollama(
-                    model=fallback,
-                    prompt=prompt,
-                    system=system,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-                selected_model = fallback
-                provider_name = "ollama"
+            if fallback and fallback != selected_model:
+                try:
+                    response = await self._call_ollama(
+                        model=fallback,
+                        prompt=prompt,
+                        system=system,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                    )
+                    selected_model = fallback
+                    provider_name = "ollama"
+                except Exception as fallback_error:
+                    logger.error(f"Fallback model {fallback} also failed: {fallback_error}")
+                    raise fallback_error
             else:
                 raise
 

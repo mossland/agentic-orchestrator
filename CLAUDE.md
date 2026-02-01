@@ -236,9 +236,10 @@ pm2 logs moss-ao-debate --lines 100
 pm2 save
 ```
 
-### 현재 운영 모드: PRODUCTION
+### 현재 운영 모드: PRODUCTION (v0.6.5)
 
-`ecosystem.config.js`의 `TEST_MODE = false`로 프로덕션 스케줄 적용 중:
+`ecosystem.config.js`의 `TEST_MODE = false`로 프로덕션 스케줄 적용 중.
+`config.yaml`의 `debate.test_mode: false`, `throttling.test_mode: false` 모두 프로덕션 모드:
 
 | 작업 | 주기 | Cron |
 |------|------|------|

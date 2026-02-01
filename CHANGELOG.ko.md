@@ -7,6 +7,28 @@ Mossland Agentic Orchestrator의 모든 주요 변경 사항을 이 파일에 �
 이 형식은 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)를 기반으로 하며,
 이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
 
+## [0.6.5] - 2026-02-01
+
+### 수정됨
+
+#### 백엔드 안정성 및 성능 (시스템 점검)
+- **Ollama 쓰로틀 락 병목 (H3)**: `_wait_for_throttle`에서 `asyncio.sleep()` 중 락 해제, 다수 에이전트 동시 LLM 요청 시 직렬화 방지
+- **토론 타임아웃 (H4)**: 프로덕션 모드에서 무한 실행 방지를 위한 45분 전체 타임아웃 (`DEBATE_TIMEOUT_SECONDS`) 추가
+- **API 에러 응답 일관성 (H5)**: dict 기반 에러 응답(`{"error": "..."}`)을 `HTTPException(status_code=404)`로 통일 (토론 상세, 아이디어 상세, 아이디어 계보, 플랜 상세)
+- **중복 프로젝트 생성 방지 (M1)**: `_create_project_record()`에 중복 체크 추가 - 동일 Plan에 "generating" 또는 "ready" 상태 프로젝트가 있으면 기존 ID 반환
+- **Job 상태 영속화 (M2)**: 프로젝트 생성 작업 상태가 `data/project_jobs.json`에 저장되어 서버 재시작 시에도 유지
+- **Plan 상세에 `title_ko` 누락 (M3)**: `/plans/{id}` 응답에 `title_ko`, `final_plan_ko` 필드 추가
+- **Signal 페이지네이션 (M5)**: Python 슬라이싱을 SQL `LIMIT/OFFSET`으로 교체, `count_recent_filtered()` 추가
+- **토론 페이지네이션**: debates 엔드포인트에서 SQL 레벨 페이지네이션 적용 (`get_all_sessions()`)
+- **LLM Fallback 무한 루프 (L2)**: fallback도 실패 시 즉시 예외 발생하도록 try/except 추가
+- **점수 기본값 5.0 문제 (L3)**: 점수 추출 실패 시 임의 5.0 할당 대신 경고 로깅 후 스킵
+
+### 변경됨
+- **config test_mode 통일 (H2)**: `debate.test_mode: false`로 설정하여 `throttling.test_mode: false`와 일치 (프로덕션 모드)
+- **print → logger (L1)**: `ollama.py`, `router.py`, `aggregator.py`의 모든 `print()` 호출을 `logger.error()`/`logger.info()`로 교체
+
+---
+
 ## [0.6.4] - 2026-01-25
 
 ### 추가됨
